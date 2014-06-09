@@ -202,43 +202,6 @@ public class ConCmptBlock extends Configured implements Tool {
         }
     }
 
-    public static class CombinerStage2 extends MapReduceBase implements Reducer<IntWritable, Text, IntWritable, Text> {
-        public void reduce(final IntWritable key, final Iterator<Text> values, final OutputCollector<IntWritable, Text> output, final Reporter reporter) throws IOException {
-            String out_val = "moi";
-            int cur_min_nodeid = -1;
-
-            while (values.hasNext()) {
-                Text cur_value_text = values.next();
-                String cur_ci_string = cur_value_text.toString();
-                int cur_nodeid = -1;
-                try {
-                    cur_nodeid = Integer.parseInt(cur_ci_string.substring(3));
-                } catch (Exception ex) {
-                    System.out.println("Exception! cur_ci_string=[" + cur_ci_string + "]");
-                }
-
-                if (cur_ci_string.charAt(1) == 's') {            // for calculating individual diameter
-                    output.collect(key, new Text(cur_value_text));
-                    continue;
-                }
-
-                if (cur_min_nodeid == -1) {
-                    cur_min_nodeid = cur_nodeid;
-                } else {
-                    if (cur_nodeid < cur_min_nodeid)
-                        cur_min_nodeid = cur_nodeid;
-                }
-            }
-
-            if (cur_min_nodeid != -1) {
-                out_val += Integer.toString(cur_min_nodeid);
-
-                output.collect(key, new Text(out_val));
-            }
-        }
-    }
-
-
     //////////////////////////////////////////////////////////////////////
     // STAGE 3: Calculate number of nodes whose component id changed/unchanged.
     //  - Input: current component ids

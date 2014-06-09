@@ -37,9 +37,6 @@ class VectorElem<T> {
         val = in_val;
     }
 
-    public double getDouble() {
-        return ((Double) val).doubleValue();
-    }
 };
 
 class BlockElem<T> {
@@ -53,8 +50,6 @@ class BlockElem<T> {
         val = in_val;
     }
 };
-
-enum EdgeType {Real, Binary};
 
 public class GIMV {
     // convert strVal to array of VectorElem<Integer>.
@@ -79,80 +74,6 @@ public class GIMV {
         return arr;
     }
 
-    // parse HADI vector
-    public static ArrayList<VectorElem<String>> parseHADIVector(String strVal) {
-        ArrayList arr = new ArrayList<VectorElem<Integer>>();
-        final String[] tokens = strVal.substring(1).split(" ");
-
-        for (int i = 0; i < tokens.length; i += 2) {
-            short row = Short.parseShort(tokens[i]);
-            String bitstring;
-
-            bitstring = tokens[i + 1];
-
-            arr.add(new VectorElem<String>(row, bitstring));
-        }
-
-        // the maximum length of arr is block_width.
-        return arr;
-    }
-
-
-    // compute the dot product of two vector blocks.
-    // strVal is msu(ROW-ID   VALUE)s. ex) 0 0.5 1 0.3
-    //            oc
-    public static ArrayList<VectorElem<Double>> multDiagVector(String strDiag, String strVec, int block_width) {
-        short i;
-        ArrayList arr = new ArrayList<VectorElem<Double>>();
-
-        if (strDiag.length() == 0)
-            return arr;
-
-        double[] dVal1 = new double[block_width];
-        double[] dVal2 = new double[block_width];
-
-        String[] tokens1 = strDiag.split(" ");
-        String[] tokens2 = strVec.split(" ");
-
-        for (i = 0; i < block_width; i++) {
-            dVal1[i] = 0;
-            dVal2[i] = 0;
-        }
-
-        for (i = 0; i < tokens1.length; i += 2) {
-            short row = Short.parseShort(tokens1[i]);
-            double val = Double.parseDouble(tokens1[i + 1]);
-            dVal1[row] = 1.0 / val;
-        }
-
-        for (i = 0; i < tokens2.length; i += 2) {
-            short row = Short.parseShort(tokens2[i]);
-            double val = Double.parseDouble(tokens2[i + 1]);
-            dVal2[row] = val;
-        }
-
-        for (i = 0; i < block_width; i++) {
-            if (dVal1[i] != 0 && dVal2[i] != 0)
-                arr.add(new VectorElem(i, (dVal1[i] * dVal2[i])));
-        }
-
-        return arr;
-    }
-
-
-    // return value : true (if every VectorElem starts with 'f')
-    //                false (otherwise)
-    public static boolean IsCompleteHADIVector(ArrayList<VectorElem<String>> arr) {
-        Iterator<VectorElem<String>> vector_iter = arr.iterator();
-
-        while (vector_iter.hasNext()) {
-            VectorElem<String> cur_ve = vector_iter.next();
-            if (cur_ve.val.charAt(0) != 'f')
-                return false;
-        }
-
-        return true;
-    }
 
     public static ArrayList<VectorElem<Integer>> minBlockVector(ArrayList<BlockElem<Integer>> block, ArrayList<VectorElem<Integer>> vector, int block_width, int isFastMethod) {
         int[] out_vals = new int[block_width];    // buffer to save output
@@ -204,91 +125,6 @@ public class GIMV {
                 if (result_vector == null)
                     result_vector = new ArrayList<VectorElem<Integer>>();
                 result_vector.add(new VectorElem<Integer>(i, out_vals[i]));
-            }
-        }
-
-        return result_vector;
-    }
-
-    // multiply one block and one vector
-    // return : result vector
-    public static ArrayList<VectorElem<Double>> multBlockVector(ArrayList<BlockElem<Double>> block, ArrayList<VectorElem<Double>> vector, int i_block_width) {
-        double[] out_vals = new double[i_block_width];    // buffer to save output
-        short i;
-
-        for (i = 0; i < i_block_width; i++)
-            out_vals[i] = 0;
-
-        Iterator<VectorElem<Double>> vector_iter = vector.iterator();
-        Iterator<BlockElem<Double>> block_iter = block.iterator();
-        BlockElem<Double> saved_b_elem = null;
-
-        while (vector_iter.hasNext()) {
-            VectorElem<Double> v_elem = vector_iter.next();
-
-            BlockElem<Double> b_elem;
-            while (block_iter.hasNext() || saved_b_elem != null) {
-                if (saved_b_elem != null) {
-                    b_elem = saved_b_elem;
-                    saved_b_elem = null;
-                } else
-                    b_elem = block_iter.next();
-
-                // compare v_elem.row and b_elem.col
-                if (b_elem.col < v_elem.row)
-                    continue;
-                else if (b_elem.col == v_elem.row) {
-                    out_vals[b_elem.row] += b_elem.val * v_elem.val;
-                } else {    // b_elem.col > v_elem.row
-                    saved_b_elem = b_elem;
-                    break;
-                }
-            }
-
-        }
-
-        ArrayList<VectorElem<Double>> result_vector = null;
-        for (i = 0; i < i_block_width; i++) {
-            if (out_vals[i] != 0) {
-                if (result_vector == null)
-                    result_vector = new ArrayList<VectorElem<Double>>();
-                result_vector.add(new VectorElem(i, out_vals[i]));
-            }
-        }
-
-        return result_vector;
-    }
-
-
-    // multiply one block and one vector, when the block is in the bit encoded format.
-    // return : result vector
-    public static ArrayList<VectorElem<Double>> multBlockVector(byte[] block, ArrayList<VectorElem<Double>> vector, int i_block_width) {
-        double[] out_vals = new double[i_block_width];    // buffer to save output
-        short i;
-
-        for (i = 0; i < i_block_width; i++)
-            out_vals[i] = 0;
-
-        Iterator<VectorElem<Double>> vector_iter = vector.iterator();
-
-        while (vector_iter.hasNext()) {
-            VectorElem<Double> v_elem = vector_iter.next();
-
-            int col = v_elem.row;
-            for (int row = 0; row < i_block_width; row++) {
-                int edge_elem = block[(row * i_block_width + col) / 8] & (1 << (col % 8));
-                if (edge_elem > 0) {
-                    out_vals[row] += v_elem.val;
-                }
-            }
-        }
-
-        ArrayList<VectorElem<Double>> result_vector = null;
-        for (i = 0; i < i_block_width; i++) {
-            if (out_vals[i] != 0) {
-                if (result_vector == null)
-                    result_vector = new ArrayList<VectorElem<Double>>();
-                result_vector.add(new VectorElem(i, out_vals[i]));
             }
         }
 
@@ -364,22 +200,6 @@ public class GIMV {
             if (elem1.row != elem2.row || ((Comparable) (elem1.val)).compareTo(elem2.val) != 0)
                 return 1;
         }
-
-        return 0;
-    }
-
-    // print the content of the input vector.
-    public static <T> int printVector(ArrayList<VectorElem<T>> vector) {
-        Iterator<VectorElem<T>> v_iter = vector.iterator();
-
-        System.out.print("vector : ");
-        while (v_iter.hasNext()) {
-            VectorElem<T> elem = v_iter.next();
-
-            System.out.print(" v[" + elem.row + "] = " + elem.val);
-        }
-
-        System.out.println("");
 
         return 0;
     }
