@@ -24,8 +24,8 @@ package pegasus;
 import java.io.*;
 
 class ResultInfo {
-    public int changed;
-    public int unchanged;
+    public long changed;
+    public long unchanged;
 };
 
 public class ConCmpt {
@@ -47,9 +47,9 @@ public class ConCmpt {
                 final String[] line = file_line.split("\t");
 
                 if (line[0].startsWith("i"))
-                    ri.changed = Integer.parseInt(line[1]);
+                    ri.changed = Long.parseLong(line[1]);
                 else    // line[0].startsWith("u")
-                    ri.unchanged = Integer.parseInt(line[1]);
+                    ri.unchanged = Long.parseLong(line[1]);
 
                 file_line = in.readLine();
             }

@@ -39,8 +39,7 @@ import java.util.Iterator;
 
 public class ConCmptBlock extends Configured implements Tool {
     public static int MAX_ITERATIONS = 1024;
-    public static int changed_nodes[] = new int[MAX_ITERATIONS];
-    public static int unchanged_nodes[] = new int[MAX_ITERATIONS];
+    public static long changed_nodes[] = new long[MAX_ITERATIONS];
 
     static int iter_counter = 0;
 
@@ -54,8 +53,8 @@ public class ConCmptBlock extends Configured implements Tool {
     //  - Input: edge_file, component_ids_from_the_last_iteration
     //  - Output: partial component ids
     //////////////////////////////////////////////////////////////////////
-    public static class MapStage1 extends MapReduceBase implements Mapper<LongWritable, Text, IntWritable, Text> {
-        public void map(final LongWritable key, final Text value, final OutputCollector<IntWritable, Text> output, final Reporter reporter) throws IOException {
+    public static class MapStage1 extends MapReduceBase implements Mapper<LongWritable, Text, LongWritable, Text> {
+        public void map(final LongWritable key, final Text value, final OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
             String line_text = value.toString();
             if (line_text.startsWith("#"))                // ignore comments in edge file
                 return;
@@ -66,14 +65,14 @@ public class ConCmptBlock extends Configured implements Tool {
                 return;
 
             if (line.length == 2) {    // vector. component information.
-                output.collect(new IntWritable(Integer.parseInt(line[0])), new Text(line[1]));
+                output.collect(new LongWritable(Long.parseLong(line[0])), new Text(line[1]));
             } else {                    // edge
-                output.collect(new IntWritable(Integer.parseInt(line[1])), new Text(line[0] + "\t" + line[2]));
+                output.collect(new LongWritable(Long.parseLong(line[1])), new Text(line[0] + "\t" + line[2]));
             }
         }
     }
 
-    public static class RedStage1 extends MapReduceBase implements Reducer<IntWritable, Text, IntWritable, Text> {
+    public static class RedStage1 extends MapReduceBase implements Reducer<LongWritable, Text, LongWritable, Text> {
         protected int block_width;
         protected int recursive_diagmult;
 
@@ -83,10 +82,10 @@ public class ConCmptBlock extends Configured implements Tool {
             System.out.println("RedStage1: block_width=" + block_width + ", recursive_diagmult=" + recursive_diagmult);
         }
 
-        public void reduce(final IntWritable key, final Iterator<Text> values, OutputCollector<IntWritable, Text> output, final Reporter reporter) throws IOException {
-            ArrayList<VectorElem<Integer>> vectorArr = null;        // save vector
-            ArrayList<ArrayList<BlockElem<Integer>>> blockArr = new ArrayList<ArrayList<BlockElem<Integer>>>();    // save blocks
-            ArrayList<Integer> blockRowArr = new ArrayList<Integer>();    // save block rows(integer)
+        public void reduce(final LongWritable key, final Iterator<Text> values, OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
+            ArrayList<VectorElem<Long>> vectorArr = null;        // save vector
+            ArrayList<ArrayList<BlockElem<Long>>> blockArr = new ArrayList<ArrayList<BlockElem<Long>>>();    // save blocks
+            ArrayList<Long> blockRowArr = new ArrayList<Long>();    // save block rows(integer)
 
             while (values.hasNext()) {
                 // vector: key=BLOCKID, value= (IN-BLOCK-INDEX VALUE)s
@@ -95,10 +94,10 @@ public class ConCmptBlock extends Configured implements Tool {
                 final String[] line = line_text.split("\t");
 
                 if (line.length == 1) {    // vector : VALUE
-                    vectorArr = GIMV.parseVectorVal(line_text.substring(3), Integer.class);
+                    vectorArr = GIMV.parseVectorVal(line_text.substring(3), Long.class);
                 } else {                    // edge : BLOCK-ROWID		VALUE
-                    blockArr.add(GIMV.parseBlockVal(line[1], Integer.class));
-                    int block_row = Integer.parseInt(line[0]);
+                    blockArr.add(GIMV.parseBlockVal(line[1], Long.class));
+                    long block_row = Long.parseLong(line[0]);
                     blockRowArr.add(block_row);
                 }
             }
@@ -111,16 +110,16 @@ public class ConCmptBlock extends Configured implements Tool {
             output.collect(key, GIMV.formatVectorElemOutput("msi", vectorArr));
 
             // For every matrix block, join it with vector and output partial results
-            Iterator<ArrayList<BlockElem<Integer>>> blockArrIter = blockArr.iterator();
-            Iterator<Integer> blockRowIter = blockRowArr.iterator();
+            Iterator<ArrayList<BlockElem<Long>>> blockArrIter = blockArr.iterator();
+            Iterator<Long> blockRowIter = blockRowArr.iterator();
             while (blockArrIter.hasNext()) {
-                ArrayList<BlockElem<Integer>> cur_block = blockArrIter.next();
-                int cur_block_row = blockRowIter.next();
+                ArrayList<BlockElem<Long>> cur_block = blockArrIter.next();
+                long cur_block_row = blockRowIter.next();
 
-                ArrayList<VectorElem<Integer>> cur_mult_result = null;
+                ArrayList<VectorElem<Long>> cur_mult_result = null;
 
                 if (key.get() == cur_block_row && recursive_diagmult == 1) {    // do recursive multiplication
-                    ArrayList<VectorElem<Integer>> tempVectorArr = vectorArr;
+                    ArrayList<VectorElem<Long>> tempVectorArr = vectorArr;
                     for (int i = 0; i < block_width; i++) {
                         cur_mult_result = GIMV.minBlockVector(cur_block, tempVectorArr, block_width, 1);
                         if (cur_mult_result == null || GIMV.compareVectors(tempVectorArr, cur_mult_result) == 0)
@@ -134,7 +133,7 @@ public class ConCmptBlock extends Configured implements Tool {
 
                 Text output_vector = GIMV.formatVectorElemOutput("moi", cur_mult_result);
                 if (output_vector.toString().length() > 0)
-                    output.collect(new IntWritable(cur_block_row), output_vector);
+                    output.collect(new LongWritable(cur_block_row), output_vector);
             }
         }
 
@@ -146,16 +145,16 @@ public class ConCmptBlock extends Configured implements Tool {
     //  - Input: partial component ids
     //  - Output: combined component ids
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    public static class MapStage2 extends MapReduceBase implements Mapper<LongWritable, Text, IntWritable, Text> {
+    public static class MapStage2 extends MapReduceBase implements Mapper<LongWritable, Text, LongWritable, Text> {
         // Identity mapper
-        public void map(final LongWritable key, final Text value, final OutputCollector<IntWritable, Text> output, final Reporter reporter) throws IOException {
+        public void map(final LongWritable key, final Text value, final OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
             final String[] line = value.toString().split("\t");
 
-            output.collect(new IntWritable(Integer.parseInt(line[0])), new Text(line[1]));
+            output.collect(new LongWritable(Long.parseLong(line[0])), new Text(line[1]));
         }
     }
 
-    public static class RedStage2 extends MapReduceBase implements Reducer<IntWritable, Text, IntWritable, Text> {
+    public static class RedStage2 extends MapReduceBase implements Reducer<LongWritable, Text, LongWritable, Text> {
         protected int block_width;
 
         public void configure(JobConf job) {
@@ -163,9 +162,9 @@ public class ConCmptBlock extends Configured implements Tool {
             System.out.println("RedStage2: block_width=" + block_width);
         }
 
-        public void reduce(final IntWritable key, final Iterator<Text> values, final OutputCollector<IntWritable, Text> output, final Reporter reporter) throws IOException {
-            ArrayList<VectorElem<Integer>> self_vector = null;
-            int[] out_vals = new int[block_width];
+        public void reduce(final LongWritable key, final Iterator<Text> values, final OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
+            ArrayList<VectorElem<Long>> self_vector = null;
+            long[] out_vals = new long[block_width];
             for (int i = 0; i < block_width; i++)
                 out_vals[i] = -1;
 
@@ -173,14 +172,14 @@ public class ConCmptBlock extends Configured implements Tool {
                 String cur_str = values.next().toString();
 
                 if (cur_str.charAt(1) == 's') {
-                    self_vector = GIMV.parseVectorVal(cur_str.substring(3), Integer.class);
+                    self_vector = GIMV.parseVectorVal(cur_str.substring(3), Long.class);
                 }
 
-                ArrayList<VectorElem<Integer>> cur_vector = GIMV.parseVectorVal(cur_str.substring(3), Integer.class);
-                Iterator<VectorElem<Integer>> vector_iter = cur_vector.iterator();
+                ArrayList<VectorElem<Long>> cur_vector = GIMV.parseVectorVal(cur_str.substring(3), Long.class);
+                Iterator<VectorElem<Long>> vector_iter = cur_vector.iterator();
 
                 while (vector_iter.hasNext()) {
-                    VectorElem<Integer> v_elem = vector_iter.next();
+                    VectorElem<Long> v_elem = vector_iter.next();
 
                     if (out_vals[v_elem.row] == -1)
                         out_vals[v_elem.row] = v_elem.val;
@@ -189,7 +188,7 @@ public class ConCmptBlock extends Configured implements Tool {
                 }
             }
 
-            ArrayList<VectorElem<Integer>> new_vector = GIMV.makeIntVectors(out_vals, block_width);
+            ArrayList<VectorElem<Long>> new_vector = GIMV.makeLongVectors(out_vals, block_width);
             int isDifferent = GIMV.compareVectors(self_vector, new_vector);
 
             String out_prefix = "ms";
@@ -223,16 +222,16 @@ public class ConCmptBlock extends Configured implements Tool {
 
     public static class RedStage3 extends MapReduceBase implements Reducer<Text, Text, Text, Text> {
         public void reduce(final Text key, final Iterator<Text> values, final OutputCollector<Text, Text> output, final Reporter reporter) throws IOException {
-            int sum = 0;
+            long sum = 0;
 
             while (values.hasNext()) {
                 final String line = values.next().toString();
-                int cur_value = Integer.parseInt(line);
+                long cur_value = Long.parseLong(line);
 
                 sum += cur_value;
             }
 
-            output.collect(key, new Text(Integer.toString(sum)));
+            output.collect(key, new Text(Long.toString(sum)));
         }
     }
 
@@ -242,7 +241,7 @@ public class ConCmptBlock extends Configured implements Tool {
     //  - Input: the converged component ids
     //  - Output: (node_id, "msu"component_id)
     //////////////////////////////////////////////////////////////////////
-    public static class MapStage4 extends MapReduceBase implements Mapper<LongWritable, Text, IntWritable, Text> {
+    public static class MapStage4 extends MapReduceBase implements Mapper<LongWritable, Text, LongWritable, Text> {
         int block_width;
 
         public void configure(JobConf job) {
@@ -253,17 +252,17 @@ public class ConCmptBlock extends Configured implements Tool {
 
         // input sample :
         //1       msu0 1 1 1
-        public void map(final LongWritable key, final Text value, final OutputCollector<IntWritable, Text> output, final Reporter reporter) throws IOException {
+        public void map(final LongWritable key, final Text value, final OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
             final String[] line = value.toString().split("\t");
             final String[] tokens = line[1].substring(3).split(" ");
             int i;
-            int block_id = Integer.parseInt(line[0]);
+            long block_id = Long.parseLong(line[0]);
 
             for (i = 0; i < tokens.length; i += 2) {
-                int elem_row = Integer.parseInt(tokens[i]);
-                int component_id = Integer.parseInt(tokens[i + 1]);
+                long elem_row = Long.parseLong(tokens[i]);
+                long component_id = Long.parseLong(tokens[i + 1]);
 
-                output.collect(new IntWritable(block_width * block_id + elem_row), new Text("msf" + component_id));
+                output.collect(new LongWritable(block_width * block_id + elem_row), new Text("msf" + component_id));
             }
         }
     }
@@ -274,9 +273,9 @@ public class ConCmptBlock extends Configured implements Tool {
     //    output : comcmpt_summaryout
     //             min_node_id, number_of_nodes_in_the_component
     //////////////////////////////////////////////////////////////////////
-    public static class MapStage5 extends MapReduceBase implements Mapper<LongWritable, Text, IntWritable, IntWritable> {
-        private final IntWritable out_key_int = new IntWritable();
-        private final IntWritable out_count_int = new IntWritable(1);
+    public static class MapStage5 extends MapReduceBase implements Mapper<LongWritable, Text, LongWritable, LongWritable> {
+        private final LongWritable out_key_int = new LongWritable();
+        private final LongWritable out_count_int = new LongWritable(1);
         int block_width;
 
         public void configure(JobConf job) {
@@ -285,13 +284,13 @@ public class ConCmptBlock extends Configured implements Tool {
             System.out.println("MapStage5 : configure is called.  block_width=" + block_width);
         }
 
-        public void map(final LongWritable key, final Text value, final OutputCollector<IntWritable, IntWritable> output, final Reporter reporter) throws IOException {
+        public void map(final LongWritable key, final Text value, final OutputCollector<LongWritable, LongWritable> output, final Reporter reporter) throws IOException {
             String line_text = value.toString();
             final String[] line = line_text.split("\t");
             final String[] elems = line[1].substring(3).split(" ");
 
             for (int i = 0; i < elems.length; i += 2) {
-                int cur_minnode = Integer.parseInt(elems[i + 1]);
+                long cur_minnode = Long.parseLong(elems[i + 1]);
 
                 out_key_int.set(cur_minnode);
                 output.collect(out_key_int, out_count_int);
@@ -299,16 +298,16 @@ public class ConCmptBlock extends Configured implements Tool {
         }
     }
 
-    public static class RedStage5 extends MapReduceBase implements Reducer<IntWritable, IntWritable, IntWritable, IntWritable> {
-        public void reduce(final IntWritable key, final Iterator<IntWritable> values, OutputCollector<IntWritable, IntWritable> output, final Reporter reporter) throws IOException {
+    public static class RedStage5 extends MapReduceBase implements Reducer<LongWritable, LongWritable, LongWritable, LongWritable> {
+        public void reduce(final LongWritable key, final Iterator<LongWritable> values, OutputCollector<LongWritable, LongWritable> output, final Reporter reporter) throws IOException {
             int count = 0;
 
             while (values.hasNext()) {
-                int cur_count = values.next().get();
+                long cur_count = values.next().get();
                 count += cur_count;
             }
 
-            IntWritable count_int = new IntWritable(count);
+            LongWritable count_int = new LongWritable(count);
             output.collect(key, count_int);
         }
     }
@@ -326,7 +325,7 @@ public class ConCmptBlock extends Configured implements Tool {
     protected Path curbm_unfold_path = null;
     protected Path summaryout_path = null;
     protected String local_output_path;
-    protected int number_nodes = 0;
+    protected long number_nodes = 0;
     protected int nreducers = 1;
     protected int cur_radius = 0;
     protected int block_width = 64;
@@ -363,7 +362,7 @@ public class ConCmptBlock extends Configured implements Tool {
         output_path = new Path(args[4]);
         curbm_unfold_path = new Path("concmpt_curbm");
         summaryout_path = new Path("concmpt_summaryout");
-        number_nodes = Integer.parseInt(args[5]);
+        number_nodes = Long.parseLong(args[5]);
         nreducers = Integer.parseInt(args[6]);
 
         if (args[7].compareTo("fast") == 0)
@@ -453,7 +452,7 @@ public class ConCmptBlock extends Configured implements Tool {
 
         conf.setNumReduceTasks(nreducers);
 
-        conf.setOutputKeyClass(IntWritable.class);
+        conf.setOutputKeyClass(LongWritable.class);
         conf.setOutputValueClass(Text.class);
 
         return conf;
@@ -473,7 +472,7 @@ public class ConCmptBlock extends Configured implements Tool {
 
         conf.setNumReduceTasks(nreducers);
 
-        conf.setOutputKeyClass(IntWritable.class);
+        conf.setOutputKeyClass(LongWritable.class);
         conf.setOutputValueClass(Text.class);
 
         return conf;
@@ -512,7 +511,7 @@ public class ConCmptBlock extends Configured implements Tool {
 
         conf.setNumReduceTasks(0);        //This is essential for map-only tasks.
 
-        conf.setOutputKeyClass(IntWritable.class);
+        conf.setOutputKeyClass(LongWritable.class);
         conf.setOutputValueClass(Text.class);
 
         return conf;
@@ -533,8 +532,8 @@ public class ConCmptBlock extends Configured implements Tool {
 
         conf.setNumReduceTasks(nreducers);
 
-        conf.setOutputKeyClass(IntWritable.class);
-        conf.setOutputValueClass(IntWritable.class);
+        conf.setOutputKeyClass(LongWritable.class);
+        conf.setOutputValueClass(LongWritable.class);
 
         return conf;
     }

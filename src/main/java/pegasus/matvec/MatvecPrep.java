@@ -49,12 +49,12 @@ public class MatvecPrep extends Configured implements Tool {
     //////////////////////////////////////////////////////////////////////
     public static class MapStage1 extends MapReduceBase implements Mapper<LongWritable, Text, Text, Text> {
         int block_size;
-        int matrix_row;
+        long matrix_row;
         int makesym;
 
         public void configure(JobConf job) {
             block_size = Integer.parseInt(job.get("block_size"));
-            matrix_row = Integer.parseInt(job.get("matrix_row"));
+            matrix_row = Long.parseLong(job.get("matrix_row"));
             makesym = Integer.parseInt(job.get("makesym"));
 
             System.out.println("MapStage1: block_size = " + block_size + ", matrix_row=" + matrix_row + ", makesym = " + makesym);
@@ -71,20 +71,21 @@ public class MatvecPrep extends Configured implements Tool {
 
             if (line[1].charAt(0) == 'v') {
                 // (vector)  ROWID		vVALUE    =>    BLOCKID	IN-BLOCK-INDEX VALUE
-                int row_id = Integer.parseInt(line[0]);
-                int block_id = row_id / block_size;
-                int in_block_index = row_id % block_size;
+                long row_id = Long.parseLong(line[0]);
+                long block_id = row_id / block_size;
+                long in_block_index = row_id % block_size;
 
                 output.collect(new Text("" + block_id), new Text("" + in_block_index + " " + line[1].substring(1)));
             } else {
-                int row_id = Integer.parseInt(line[0]);
-                int col_id = Integer.parseInt(line[1]);
-                int block_rowid = row_id / block_size;
-                int block_colid = col_id / block_size;
-                int in_block_row = col_id % block_size;    // trick : transpose
-                int in_block_col = row_id % block_size; // trick : transpose
+                long row_id = Long.parseLong(line[0]);
+                long col_id = Long.parseLong(line[1]);
+                long block_rowid = row_id / block_size;
+                long block_colid = col_id / block_size;
+                long in_block_row = col_id % block_size;    // trick : transpose
+                long in_block_col = row_id % block_size; // trick : transpose
 
                 if (line.length == 3) {
+                    //TODO: JEROME, this can probably be remove, we don't have any real matrix...
                     //      (real matrix)  ROWID		COLID		VALUE
                     //            =>  BLOCK-ROW		BLOCK-COL		IN-BLOCK-ROW IN-BLOCK-COL VALUE
                     String elem_val;
@@ -186,7 +187,7 @@ public class MatvecPrep extends Configured implements Tool {
     //////////////////////////////////////////////////////////////////////
     protected Path edge_path = null;
     protected Path output_path = null;
-    protected int number_nodes = 0;
+    protected long number_nodes = 0;
     protected int block_size = 1;
     protected int nreducer = 1;
     protected String output_prefix;
@@ -216,7 +217,7 @@ public class MatvecPrep extends Configured implements Tool {
 
         edge_path = new Path(args[0]);
         output_path = new Path(args[1]);
-        number_nodes = Integer.parseInt(args[2]);    // number of row of matrix
+        number_nodes = Long.parseLong(args[2]);    // number of row of matrix
         block_size = Integer.parseInt(args[3]);
         nreducer = Integer.parseInt(args[4]);
 

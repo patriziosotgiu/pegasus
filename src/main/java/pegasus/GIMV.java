@@ -68,6 +68,9 @@ public class GIMV {
             } else if (type.getSimpleName().equals("Double")) {
                 double val = Double.parseDouble(tokens[i + 1]);
                 arr.add(new VectorElem(row, val));
+            } else if (type.getSimpleName().equals("Long")) {
+                long val = Long.parseLong(tokens[i + 1]);
+                arr.add(new VectorElem(row, val));
             }
         }
 
@@ -75,56 +78,56 @@ public class GIMV {
     }
 
 
-    public static ArrayList<VectorElem<Integer>> minBlockVector(ArrayList<BlockElem<Integer>> block, ArrayList<VectorElem<Integer>> vector, int block_width, int isFastMethod) {
-        int[] out_vals = new int[block_width];    // buffer to save output
+    public static ArrayList<VectorElem<Long>> minBlockVector(ArrayList<BlockElem<Long>> block, ArrayList<VectorElem<Long>> vector, int block_width, int isFastMethod) {
+        long[] out_vals = new long[block_width];    // buffer to save output
         short i;
 
         for (i = 0; i < block_width; i++)
             out_vals[i] = -1;
 
-        Iterator<VectorElem<Integer>> vector_iter;
-        Iterator<BlockElem<Integer>> block_iter;
-        Map<Short, Integer> vector_map = new HashMap<Short, Integer>();
+        Iterator<VectorElem<Long>> vector_iter;
+        Iterator<BlockElem<Long>> block_iter;
+        Map<Short, Long> vector_map = new HashMap<Short, Long>();
 
         // initialize out_vals
         if (isFastMethod == 1) {
             vector_iter = vector.iterator();
             while (vector_iter.hasNext()) {
-                VectorElem<Integer> v_elem = vector_iter.next();
+                VectorElem<Long> v_elem = vector_iter.next();
                 out_vals[v_elem.row] = v_elem.val;
             }
         }
 
         vector_iter = vector.iterator();
         block_iter = block.iterator();
-        BlockElem<Integer> saved_b_elem = null;
+        BlockElem<Long> saved_b_elem = null;
 
         while (vector_iter.hasNext()) {
-            VectorElem<Integer> v_elem = vector_iter.next();
+            VectorElem<Long> v_elem = vector_iter.next();
             vector_map.put(v_elem.row, v_elem.val);
         }
 
 
-        BlockElem<Integer> b_elem;
+        BlockElem<Long> b_elem;
         while (block_iter.hasNext() || saved_b_elem != null) {
             b_elem = block_iter.next();
 
-            Integer vector_val = vector_map.get(b_elem.col);
+            Long vector_val = vector_map.get(b_elem.col);
             if (vector_val != null) {
-                int vector_val_int = vector_val.intValue();
+                long vector_val_long = vector_val.longValue();
                 if (out_vals[b_elem.row] == -1)
-                    out_vals[b_elem.row] = vector_val_int;
-                else if (out_vals[b_elem.row] > vector_val_int)
-                    out_vals[b_elem.row] = vector_val_int;
+                    out_vals[b_elem.row] = vector_val_long;
+                else if (out_vals[b_elem.row] > vector_val_long)
+                    out_vals[b_elem.row] = vector_val_long;
             }
         }
 
-        ArrayList<VectorElem<Integer>> result_vector = null;
+        ArrayList<VectorElem<Long>> result_vector = null;
         for (i = 0; i < block_width; i++) {
             if (out_vals[i] != -1) {
                 if (result_vector == null)
-                    result_vector = new ArrayList<VectorElem<Integer>>();
-                result_vector.add(new VectorElem<Integer>(i, out_vals[i]));
+                    result_vector = new ArrayList<VectorElem<Long>>();
+                result_vector.add(new VectorElem<Long>(i, out_vals[i]));
             }
         }
 
@@ -150,6 +153,14 @@ public class GIMV {
                 arr.add(be);
             }
         } else if (type.getSimpleName().equals("Integer")) {
+            for (i = 0; i < tokens.length; i += 2) {
+                short row = Short.parseShort(tokens[i + 1]);
+                short col = Short.parseShort(tokens[i]);
+
+                BlockElem<T> be = new BlockElem(row, col, 1);
+                arr.add(be);
+            }
+        } else if (type.getSimpleName().equals("Long")) {
             for (i = 0; i < tokens.length; i += 2) {
                 short row = Short.parseShort(tokens[i + 1]);
                 short col = Short.parseShort(tokens[i]);
@@ -204,18 +215,18 @@ public class GIMV {
         return 0;
     }
 
-    // make an integer vector
-    public static ArrayList<VectorElem<Integer>> makeIntVectors(int[] int_vals, int block_width) {
+    public static ArrayList<VectorElem<Long>> makeLongVectors(long[] int_vals, int block_width) {
         int i;
-        ArrayList<VectorElem<Integer>> result_vector = new ArrayList<VectorElem<Integer>>();
+        ArrayList<VectorElem<Long>> result_vector = new ArrayList<VectorElem<Long>>();
 
         for (i = 0; i < block_width; i++) {
             if (int_vals[i] != -1) {
-                result_vector.add(new VectorElem<Integer>((short) i, int_vals[i]));
+                result_vector.add(new VectorElem<Long>((short) i, int_vals[i]));
             }
         }
 
         return result_vector;
     }
+
 };
 
