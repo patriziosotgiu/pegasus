@@ -22,21 +22,15 @@
 
 package pegasus.matvec;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
+import java.io.*;
+import java.util.*;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.compress.SnappyCodec;
+import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.util.*;
 
 public class MatvecPrep extends Configured implements Tool {
     //////////////////////////////////////////////////////////////////////
@@ -261,6 +255,8 @@ public class MatvecPrep extends Configured implements Tool {
 
         FileInputFormat.setInputPaths(conf, edge_path);
         FileOutputFormat.setOutputPath(conf, output_path);
+        FileOutputFormat.setCompressOutput(conf, true);
+        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         int num_reduce_tasks = nreducer;
 
