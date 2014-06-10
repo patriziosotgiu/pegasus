@@ -43,8 +43,8 @@ public class ConCmptIVGen extends Configured implements Tool {
     //  - Input: init vector generation command
     //  - Output: nodeid   TAB   initial_component_vector
     //////////////////////////////////////////////////////////////////////
-    public static class MapStage1 extends MapReduceBase implements Mapper<LongWritable, Text, IntWritable, Text> {
-        public void map(final LongWritable key, final Text value, final OutputCollector<IntWritable, Text> output, final Reporter reporter) throws IOException {
+    public static class MapStage1 extends MapReduceBase implements Mapper<LongWritable, Text, LongWritable, Text> {
+        public void map(final LongWritable key, final Text value, final OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
             String line_text = value.toString();
             if (line_text.startsWith("#"))                // ignore comments in edge file
                 return;
@@ -53,31 +53,31 @@ public class ConCmptIVGen extends Configured implements Tool {
             if (line.length < 3)
                 return;
 
-            output.collect(new IntWritable(Integer.parseInt(line[0])), new Text(line[1] + "\t" + line[2]));
+            output.collect(new LongWritable(Long.parseLong(line[0])), new Text(line[1] + "\t" + line[2]));
         }
     }
 
-    public static class RedStage1 extends MapReduceBase implements Reducer<IntWritable, Text, IntWritable, Text> {
-        int number_nodes = 0;
+    public static class RedStage1 extends MapReduceBase implements Reducer<LongWritable, Text, LongWritable, Text> {
+        long number_nodes = 0;
 
         public void configure(JobConf job) {
-            number_nodes = Integer.parseInt(job.get("number_nodes"));
+            number_nodes = Long.parseLong(job.get("number_nodes"));
 
             System.out.println("RedStage1: number_nodes = " + number_nodes);
         }
 
-        public void reduce(final IntWritable key, final Iterator<Text> values, OutputCollector<IntWritable, Text> output, final Reporter reporter) throws IOException {
-            int start_node, end_node;
+        public void reduce(final LongWritable key, final Iterator<Text> values, OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
+            long start_node, end_node;
 
             while (values.hasNext()) {
                 Text cur_text = values.next();
                 final String[] line = cur_text.toString().split("\t");
 
-                start_node = Integer.parseInt(line[0]);
-                end_node = Integer.parseInt(line[1]);
+                start_node = Long.parseLong(line[0]);
+                end_node = Long.parseLong(line[1]);
 
-                for (int i = start_node; i <= end_node; i++) {
-                    output.collect(new IntWritable(i), new Text("v" + i));
+                for (long i = start_node; i <= end_node; i++) {
+                    output.collect(new LongWritable(i), new Text("v" + i));
                 }
             }
         }
@@ -88,7 +88,7 @@ public class ConCmptIVGen extends Configured implements Tool {
     //////////////////////////////////////////////////////////////////////
     protected Path input_path = null;
     protected Path output_path = null;
-    protected int number_nodes = 0;
+    protected long number_nodes = 0;
     protected int number_reducers = 1;
     FileSystem fs;
 
@@ -115,7 +115,7 @@ public class ConCmptIVGen extends Configured implements Tool {
 
         input_path = new Path("cc_ivcmd");
         output_path = new Path(args[0]);
-        number_nodes = Integer.parseInt(args[1]);
+        number_nodes = Long.parseLong(args[1]);
         number_reducers = Integer.parseInt(args[2]);
 
         System.out.println("\n-----===[PEGASUS: A Peta-Scale Graph Mining System]===-----\n");
@@ -136,7 +136,7 @@ public class ConCmptIVGen extends Configured implements Tool {
     }
 
     // generate bitmask command file which is used in the 1st iteration.
-    public void gen_cmd_file(int num_nodes, int num_reducers, Path input_path) throws IOException {
+    public void gen_cmd_file(long num_nodes, int num_reducers, Path input_path) throws IOException {
         // generate a temporary local command file
         int i;
         String file_name = "component_iv.temp";
@@ -147,8 +147,8 @@ public class ConCmptIVGen extends Configured implements Tool {
         out.write("# number of nodes in graph = " + number_nodes + "\n");
         System.out.print("creating initial vector generation cmd...");
 
-        int step = num_nodes / num_reducers;
-        int start_node, end_node;
+        long step = num_nodes / num_reducers;
+        long start_node, end_node;
 
         for (i = 0; i < num_reducers; i++) {
             start_node = i * step;
@@ -182,7 +182,7 @@ public class ConCmptIVGen extends Configured implements Tool {
 
         conf.setNumReduceTasks(number_reducers);
 
-        conf.setOutputKeyClass(IntWritable.class);
+        conf.setOutputKeyClass(LongWritable.class);
         conf.setOutputValueClass(Text.class);
 
         return conf;
