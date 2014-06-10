@@ -21,21 +21,15 @@
 
 package pegasus;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
+import java.io.*;
+import java.util.*;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.Iterator;
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.compress.SnappyCodec;
+import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.util.*;
 
 public class ConCmptIVGen extends Configured implements Tool {
     //////////////////////////////////////////////////////////////////////
@@ -179,11 +173,14 @@ public class ConCmptIVGen extends Configured implements Tool {
 
         FileInputFormat.setInputPaths(conf, input_path);
         FileOutputFormat.setOutputPath(conf, output_path);
+        FileOutputFormat.setCompressOutput(conf, true);
+        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setNumReduceTasks(number_reducers);
 
         conf.setOutputKeyClass(LongWritable.class);
         conf.setOutputValueClass(Text.class);
+
 
         return conf;
     }

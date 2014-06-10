@@ -21,21 +21,15 @@
 
 package pegasus;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
+import java.io.*;
+import java.util.*;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.compress.SnappyCodec;
+import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.util.*;
 
 public class ConCmptBlock extends Configured implements Tool {
     public static int MAX_ITERATIONS = 1024;
@@ -449,6 +443,8 @@ public class ConCmptBlock extends Configured implements Tool {
 
         FileInputFormat.setInputPaths(conf, edge_path, curbm_path);
         FileOutputFormat.setOutputPath(conf, tempbm_path);
+        FileOutputFormat.setCompressOutput(conf, true);
+        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setNumReduceTasks(nreducers);
 
@@ -469,6 +465,8 @@ public class ConCmptBlock extends Configured implements Tool {
 
         FileInputFormat.setInputPaths(conf, tempbm_path);
         FileOutputFormat.setOutputPath(conf, nextbm_path);
+        FileOutputFormat.setCompressOutput(conf, true);
+        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setNumReduceTasks(nreducers);
 
@@ -508,6 +506,8 @@ public class ConCmptBlock extends Configured implements Tool {
 
         FileInputFormat.setInputPaths(conf, curbm_path);
         FileOutputFormat.setOutputPath(conf, curbm_unfold_path);
+        FileOutputFormat.setCompressOutput(conf, true);
+        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setNumReduceTasks(0);        //This is essential for map-only tasks.
 
@@ -529,6 +529,8 @@ public class ConCmptBlock extends Configured implements Tool {
 
         FileInputFormat.setInputPaths(conf, curbm_path);
         FileOutputFormat.setOutputPath(conf, summaryout_path);
+        FileOutputFormat.setCompressOutput(conf, true);
+        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setNumReduceTasks(nreducers);
 
