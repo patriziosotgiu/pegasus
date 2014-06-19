@@ -11,4 +11,4 @@ rm -rf $2
 
 hadoop dfs -rmr $2
 
-hadoop jar pegasus-2.0.jar pegasus.matvec.MatvecPrep $*
+hadoop jar Pegasus-1.2-SNAPSHOT.jar pegasus.matvec.MatvecPrep $*
