@@ -162,6 +162,7 @@ public class ConCmptBlock extends Configured implements Tool {
             for (int i = 0; i < block_width; i++)
                 out_vals[i] = -1;
 
+            int n = 0;
             while (values.hasNext()) {
                 String cur_str = values.next().toString();
 
@@ -180,9 +181,15 @@ public class ConCmptBlock extends Configured implements Tool {
                     else if (out_vals[v_elem.row] > v_elem.val)
                         out_vals[v_elem.row] = v_elem.val;
                 }
+                n++;
             }
 
             ArrayList<VectorElem<Long>> new_vector = GIMV.makeLongVectors(out_vals, block_width);
+            if (self_vector == null) {
+                reporter.incrCounter("ERROR", "self_vector == null", 1);
+                System.err.println("ERROR: self_vector == null, key=" + key + ", # values" + n);
+                return;
+            }
             int isDifferent = GIMV.compareVectors(self_vector, new_vector);
 
             String out_prefix = "ms";
