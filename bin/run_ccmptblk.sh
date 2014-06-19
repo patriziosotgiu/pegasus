@@ -31,7 +31,7 @@ hadoop dfs -rmr cc_edge_block
 ./run_mvprep.sh cc_initvector cc_iv_block $1 $4 $2 msc makesym
 hadoop dfs -rmr cc_initvector
 
-./run_mvprep.sh cc_edge cc_edge_block $1 $4 $2 null makesym
+./run_mvprep.sh $3 cc_edge_block $1 $4 $2 null makesym
 
 #### Step 3. Run pegasus.ConCmptBlock
 rm -rf concmpt_output_temp
