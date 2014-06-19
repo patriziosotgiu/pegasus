@@ -23,7 +23,7 @@ fi
 
 #### Step 1. Generate Init Vector
 hadoop dfs -rmr cc_initvector
-hadoop jar pegasus-2.0.jar pegasus.ConCmptIVGen cc_initvector $1 $2
+hadoop jar Pegasus-1.2-SNAPSHOT.jar pegasus.ConCmptIVGen cc_initvector $1 $2
 
 #### Step 2. Run mv_prep
 hadoop dfs -rmr cc_iv_block
@@ -42,7 +42,7 @@ hadoop dfs -rmr concmpt_output
 hadoop dfs -rmr concmpt_summaryout
 hadoop dfs -rmr concmpt_curbm_unfold
 
-hadoop jar pegasus-2.0.jar pegasus.ConCmptBlock cc_edge_block cc_iv_block concmpt_tempbm concmpt_nextbm concmpt_output $1 $2 fast $4
+hadoop jar Pegasus-1.2-SNAPSHOT.jar pegasus.ConCmptBlock cc_edge_block cc_iv_block concmpt_tempbm concmpt_nextbm concmpt_output $1 $2 fast $4
 
 rm -rf concmpt_output_temp
 
