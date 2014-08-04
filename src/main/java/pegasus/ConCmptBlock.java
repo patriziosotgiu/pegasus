@@ -185,11 +185,15 @@ public class ConCmptBlock extends Configured implements Tool {
             }
 
             ArrayList<VectorElem<Long>> new_vector = GIMV.makeLongVectors(out_vals, block_width);
+            //
+            // Edit by Jerome
+            //
             if (self_vector == null) {
                 reporter.incrCounter("ERROR", "self_vector == null", 1);
                 System.err.println("ERROR: self_vector == null, key=" + key + ", # values" + n);
                 return;
             }
+            //
             int isDifferent = GIMV.compareVectors(self_vector, new_vector);
 
             String out_prefix = "ms";
@@ -342,7 +346,7 @@ public class ConCmptBlock extends Configured implements Tool {
 
     // Print the command-line usage text.
     protected static int printUsage() {
-        System.out.println("ConCmptBlock <edge_path> <curbm_path> <tempbm_path> <nextbm_path> <output_path> <# of nodes> <# of reducers> <fast or normal> <block_width>");
+        System.out.println("ConCmptBlock <edge_path> <curbm_path> <tempbm_path> <nextbm_path> <output_path> <# of nodes> <# of reducers> <fast or normal> <block_width> <local_prefix>");
 
         ToolRunner.printGenericCommandUsage(System.out);
 
@@ -351,7 +355,7 @@ public class ConCmptBlock extends Configured implements Tool {
 
     // submit the map/reduce job.
     public int run(final String[] args) throws Exception {
-        if (args.length != 9) {
+        if (args.length != 10) {
             return printUsage();
         }
         int i;
@@ -376,7 +380,7 @@ public class ConCmptBlock extends Configured implements Tool {
         System.out.println("\n-----===[PEGASUS: A Peta-Scale Graph Mining System]===-----\n");
         System.out.println("[PEGASUS] Computing connected component using block method. Reducers = " + nreducers + ", block_width = " + block_width);
 
-        local_output_path = args[4] + "_temp";
+        local_output_path = args[9] + args[4] + "_temp";
 
         // Iteratively calculate neighborhood function.
         for (i = cur_radius; i < MAX_ITERATIONS; i++) {
@@ -494,6 +498,10 @@ public class ConCmptBlock extends Configured implements Tool {
 
         FileInputFormat.setInputPaths(conf, nextbm_path);
         FileOutputFormat.setOutputPath(conf, output_path);
+
+        // TODO: use compression for this job, after removing reference to part-0000 earlier in the code
+        //FileOutputFormat.setCompressOutput(conf, false);
+        //FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setNumReduceTasks(1);// This is necessary to summarize and save data.
 
