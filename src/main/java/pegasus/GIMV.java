@@ -165,7 +165,7 @@ public class GIMV {
     // compare two vectors.
     // return value : 0 (same)
     //                1 (different)
-    public static <Long> int compareVectors(ArrayList<VectorElem> v1, ArrayList<VectorElem> v2) {
+    public static int compareVectors(ArrayList<VectorElem> v1, ArrayList<VectorElem> v2) {
         if (v1.size() != v2.size())
             return 1;
 
