@@ -77,8 +77,8 @@ public class ConCmptBlock extends Configured implements Tool {
         }
 
         public void reduce(final LongWritable key, final Iterator<Text> values, OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
-            ArrayList<VectorElem<Long>> vectorArr = null;        // save vector
-            ArrayList<ArrayList<BlockElem<Long>>> blockArr = new ArrayList<ArrayList<BlockElem<Long>>>();    // save blocks
+            ArrayList<VectorElem> vectorArr = null;        // save vector
+            ArrayList<ArrayList<BlockElem>> blockArr = new ArrayList<ArrayList<BlockElem>>();    // save blocks
             ArrayList<Long> blockRowArr = new ArrayList<Long>();    // save block rows(integer)
 
             while (values.hasNext()) {
@@ -88,9 +88,9 @@ public class ConCmptBlock extends Configured implements Tool {
                 final String[] line = line_text.split("\t");
 
                 if (line.length == 1) {    // vector : VALUE
-                    vectorArr = GIMV.parseVectorVal(line_text.substring(3), Long.class);
+                    vectorArr = GIMV.parseVectorVal(line_text.substring(3));
                 } else {                    // edge : BLOCK-ROWID		VALUE
-                    blockArr.add(GIMV.parseBlockVal(line[1], Long.class));
+                    blockArr.add(GIMV.parseBlockVal(line[1]));
                     long block_row = Long.parseLong(line[0]);
                     blockRowArr.add(block_row);
                 }
@@ -104,16 +104,16 @@ public class ConCmptBlock extends Configured implements Tool {
             output.collect(key, GIMV.formatVectorElemOutput("msi", vectorArr));
 
             // For every matrix block, join it with vector and output partial results
-            Iterator<ArrayList<BlockElem<Long>>> blockArrIter = blockArr.iterator();
+            Iterator<ArrayList<BlockElem>> blockArrIter = blockArr.iterator();
             Iterator<Long> blockRowIter = blockRowArr.iterator();
             while (blockArrIter.hasNext()) {
-                ArrayList<BlockElem<Long>> cur_block = blockArrIter.next();
+                ArrayList<BlockElem> cur_block = blockArrIter.next();
                 long cur_block_row = blockRowIter.next();
 
-                ArrayList<VectorElem<Long>> cur_mult_result = null;
+                ArrayList<VectorElem> cur_mult_result = null;
 
                 if (key.get() == cur_block_row && recursive_diagmult == 1) {    // do recursive multiplication
-                    ArrayList<VectorElem<Long>> tempVectorArr = vectorArr;
+                    ArrayList<VectorElem> tempVectorArr = vectorArr;
                     for (int i = 0; i < block_width; i++) {
                         cur_mult_result = GIMV.minBlockVector(cur_block, tempVectorArr, block_width, 1);
                         if (cur_mult_result == null || GIMV.compareVectors(tempVectorArr, cur_mult_result) == 0)
@@ -157,7 +157,7 @@ public class ConCmptBlock extends Configured implements Tool {
         }
 
         public void reduce(final LongWritable key, final Iterator<Text> values, final OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
-            ArrayList<VectorElem<Long>> self_vector = null;
+            ArrayList<VectorElem> self_vector = null;
             long[] out_vals = new long[block_width];
             for (int i = 0; i < block_width; i++)
                 out_vals[i] = -1;
@@ -167,14 +167,14 @@ public class ConCmptBlock extends Configured implements Tool {
                 String cur_str = values.next().toString();
 
                 if (cur_str.charAt(1) == 's') {
-                    self_vector = GIMV.parseVectorVal(cur_str.substring(3), Long.class);
+                    self_vector = GIMV.parseVectorVal(cur_str.substring(3));
                 }
 
-                ArrayList<VectorElem<Long>> cur_vector = GIMV.parseVectorVal(cur_str.substring(3), Long.class);
-                Iterator<VectorElem<Long>> vector_iter = cur_vector.iterator();
+                ArrayList<VectorElem> cur_vector = GIMV.parseVectorVal(cur_str.substring(3));
+                Iterator<VectorElem> vector_iter = cur_vector.iterator();
 
                 while (vector_iter.hasNext()) {
-                    VectorElem<Long> v_elem = vector_iter.next();
+                    VectorElem v_elem = vector_iter.next();
 
                     if (out_vals[v_elem.row] == -1)
                         out_vals[v_elem.row] = v_elem.val;
@@ -184,7 +184,7 @@ public class ConCmptBlock extends Configured implements Tool {
                 n++;
             }
 
-            ArrayList<VectorElem<Long>> new_vector = GIMV.makeLongVectors(out_vals, block_width);
+            ArrayList<VectorElem> new_vector = GIMV.makeLongVectors(out_vals, block_width);
             if (self_vector == null) {
                 reporter.incrCounter("ERROR", "self_vector == null", 1);
                 System.err.println("ERROR: self_vector == null, key=" + key + ", # values" + n);
