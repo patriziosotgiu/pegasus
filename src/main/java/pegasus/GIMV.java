@@ -21,7 +21,7 @@
 
 package pegasus;
 
-import org.apache.hadoop.io.Text;
+import com.google.common.base.Objects;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,6 +37,33 @@ class VectorElem {
         val = in_val;
     }
 
+    @Override
+    public String toString() {
+        return Objects.toStringHelper(this)
+                .add("row", row)
+                .add("val", val)
+                .toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        VectorElem that = (VectorElem) o;
+
+        if (row != that.row) return false;
+        if (val != that.val) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) row;
+        result = 31 * result + (int) (val ^ (val >>> 32));
+        return result;
+    }
 };
 
 class BlockElem {
@@ -49,25 +76,40 @@ class BlockElem {
         col = in_col;
         val = in_val;
     }
+
+    @Override
+    public String toString() {
+        return Objects.toStringHelper(this)
+                .add("row", row)
+                .add("col", col)
+                .add("val", val)
+                .toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        BlockElem blockElem = (BlockElem) o;
+
+        if (col != blockElem.col) return false;
+        if (row != blockElem.row) return false;
+        if (val != blockElem.val) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) row;
+        result = 31 * result + (int) col;
+        result = 31 * result + (int) (val ^ (val >>> 32));
+        return result;
+    }
 };
 
 public class GIMV {
-    // convert strVal to array of VectorElem<Integer>.
-    // strVal is msu(ROW-ID   VALUE)s. ex) 0 0.5 1 0.3
-    //            oc
-    public static ArrayList<VectorElem> parseVectorVal(String strVal) {
-        ArrayList arr = new ArrayList<VectorElem>();
-        final String[] tokens = strVal.split(" ");
-        int i;
-
-        for (i = 0; i < tokens.length; i += 2) {
-            arr.add(new VectorElem(Short.parseShort(tokens[i]),
-                    Long.parseLong(tokens[i + 1])));
-        }
-
-        return arr;
-    }
-
 
     public static ArrayList<VectorElem> minBlockVector(ArrayList<BlockElem> block, ArrayList<VectorElem> vector, int block_width, int isFastMethod) {
         long[] out_vals = new long[block_width];    // buffer to save output
@@ -125,61 +167,20 @@ public class GIMV {
         return result_vector;
     }
 
-
-    // convert strVal to array of BlockElem<Integer>.
-    // strVal is (COL-ID     ROW-ID   VALUE)s. ex) 0 0 1 1 0 1 1 1 1
-    // note the strVal is tranposed. So we should tranpose it to (ROW-ID   COL-ID ...) format.
-    public static ArrayList<BlockElem> parseBlockVal(String strVal) {
-        ArrayList arr = new ArrayList<BlockElem>();
-        final String[] tokens = strVal.split(" ");
-        int i;
-
-        for (i = 0; i < tokens.length; i += 2) {
-            arr.add(new BlockElem(Short.parseShort(tokens[i + 1]), Short.parseShort(tokens[i]), 1));
-        }
-
-        return arr;
-    }
-
-    // make Text format output by combining the prefix and vector elements.
-    public static Text formatVectorElemOutput(String prefix, ArrayList<VectorElem> vector) {
-        String cur_block_output = prefix;
-        int isFirst = 1;
-        if (vector != null && vector.size() > 0) {
-            Iterator<VectorElem> cur_mult_result_iter = vector.iterator();
-
-            while (cur_mult_result_iter.hasNext()) {
-                VectorElem elem = cur_mult_result_iter.next();
-                if (cur_block_output != "" && isFirst == 0)
-                    cur_block_output += " ";
-                cur_block_output += ("" + elem.row + " " + elem.val);
-                isFirst = 0;
-            }
-
-            return new Text(cur_block_output);
-        }
-
-        return new Text("");
-    }
-
     // compare two vectors.
     // return value : 0 (same)
     //                1 (different)
     public static int compareVectors(ArrayList<VectorElem> v1, ArrayList<VectorElem> v2) {
         if (v1.size() != v2.size())
             return 1;
-
         Iterator<VectorElem> v1_iter = v1.iterator();
         Iterator<VectorElem> v2_iter = v2.iterator();
-
         while (v1_iter.hasNext()) {
             VectorElem elem1 = v1_iter.next();
             VectorElem elem2 = v2_iter.next();
-
-            if (elem1.row != elem2.row || ((Comparable) (elem1.val)).compareTo(elem2.val) != 0)
+            if (elem1.row != elem2.row || elem1.val != elem2.val)
                 return 1;
         }
-
         return 0;
     }
 
