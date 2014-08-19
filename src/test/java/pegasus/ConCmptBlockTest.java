@@ -28,7 +28,7 @@ public class ConCmptBlockTest {
 
     @Test
     public void map() throws IOException {
-        mapDriver.addInput(new LongWritable(0), new Text("1\t1 11 2 12 3 13 4 14"));
+        mapDriver.addInput(new LongWritable(0), new Text("1\tmsc1 11 2 12 3 13 4 14"));
         mapDriver.addInput(new LongWritable(1), new Text("1\t2\t1 2 1 3 4 5"));
 
         ElemArrayWritable v1 = new ElemArrayWritable();

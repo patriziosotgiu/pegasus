@@ -28,7 +28,7 @@ import java.util.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.io.compress.SnappyCodec;
+//import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.*;
 
@@ -256,7 +256,7 @@ public class MatvecPrep extends Configured implements Tool {
         FileInputFormat.setInputPaths(conf, edge_path);
         FileOutputFormat.setOutputPath(conf, output_path);
         FileOutputFormat.setCompressOutput(conf, true);
-        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
+//        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         int num_reduce_tasks = nreducer;
 

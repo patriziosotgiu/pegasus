@@ -27,7 +27,6 @@ import java.util.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.*;
 
@@ -174,7 +173,7 @@ public class ConCmptIVGen extends Configured implements Tool {
         FileInputFormat.setInputPaths(conf, input_path);
         FileOutputFormat.setOutputPath(conf, output_path);
         FileOutputFormat.setCompressOutput(conf, true);
-        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
+//        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setNumReduceTasks(number_reducers);
 

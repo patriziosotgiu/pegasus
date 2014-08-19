@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.util.*;
 
 public class ConCmptBlock extends Configured implements Tool {
@@ -66,7 +67,7 @@ public class ConCmptBlock extends Configured implements Tool {
             long v1 = Long.parseLong(line[0]);
             if (line.length == 2) {    // vector. component information.
                 KEY.set(v1);
-                String tokens[] = line[1].split(" ");
+                String tokens[] = line[1].substring(3).split(" ");
                 for (int i = 0; i < tokens.length; i += 2) {
                     VALUE.addVector(Short.parseShort(tokens[i]), Long.parseLong(tokens[i + 1]));
                 }
@@ -157,16 +158,10 @@ public class ConCmptBlock extends Configured implements Tool {
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    // STAGE 2: merge partial comonent ids.
+    // STAGE 2 merge partial comonent ids.
     //  - Input: partial component ids
     //  - Output: combined component ids
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    public static class MapStage2 extends MapReduceBase implements Mapper<LongWritable, VectorElemWritable, LongWritable, VectorElemWritable> {
-        // Identity mapper
-        public void map(final LongWritable key, final VectorElemWritable value, final OutputCollector<LongWritable, VectorElemWritable> output, final Reporter reporter) throws IOException {
-            output.collect(key, value);
-        }
-    }
 
     public static class RedStage2 extends MapReduceBase implements Reducer<LongWritable, VectorElemWritable, LongWritable, VectorElemWritable> {
         protected int block_width;
@@ -226,17 +221,12 @@ public class ConCmptBlock extends Configured implements Tool {
     //  - Input: current component ids
     //  - Output: number_of_changed_nodes
     //////////////////////////////////////////////////////////////////////
-    public static class MapStage3 extends MapReduceBase implements Mapper<LongWritable, Text, Text, Text> {
+    public static class MapStage3 extends MapReduceBase implements Mapper<LongWritable, VectorElemWritable, Text, Text> {
         // output : f n		( n : # of node whose component didn't change)
         //          i m		( m : # of node whose component changed)
-        public void map(final LongWritable key, final Text value, final OutputCollector<Text, Text> output, final Reporter reporter) throws IOException {
-            if (value.toString().startsWith("#"))
-                return;
-
-            final String[] line = value.toString().split("\t");
-            char change_prefix = line[1].charAt(2);
-
-            output.collect(new Text(Character.toString(change_prefix)), new Text(Integer.toString(1)));
+        public void map(final LongWritable key, final VectorElemWritable value, final OutputCollector<Text, Text> output, final Reporter reporter) throws IOException {
+            char change_prefix = value.getType().toString().toLowerCase().charAt(2);
+            output.collect(new Text(Character.toString(change_prefix)), new Text("1"));
         }
     }
 
@@ -261,7 +251,7 @@ public class ConCmptBlock extends Configured implements Tool {
     //  - Input: the converged component ids
     //  - Output: (node_id, "msu"component_id)
     //////////////////////////////////////////////////////////////////////
-    public static class MapStage4 extends MapReduceBase implements Mapper<LongWritable, Text, LongWritable, Text> {
+    public static class MapStage4 extends MapReduceBase implements Mapper<LongWritable, VectorElemWritable, LongWritable, Text> {
         int block_width;
 
         public void configure(JobConf job) {
@@ -272,16 +262,11 @@ public class ConCmptBlock extends Configured implements Tool {
 
         // input sample :
         //1       msu0 1 1 1
-        public void map(final LongWritable key, final Text value, final OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
-            final String[] line = value.toString().split("\t");
-            final String[] tokens = line[1].substring(3).split(" ");
-            int i;
-            long block_id = Long.parseLong(line[0]);
-
-            for (i = 0; i < tokens.length; i += 2) {
-                long elem_row = Long.parseLong(tokens[i]);
-                long component_id = Long.parseLong(tokens[i + 1]);
-
+        public void map(final LongWritable key, final VectorElemWritable value, final OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
+            long block_id = key.get();
+            for (VectorElem e: value.getVector()) {
+                long elem_row = e.row;
+                long component_id = e.val;
                 output.collect(new LongWritable(block_width * block_id + elem_row), new Text("msf" + component_id));
             }
         }
@@ -300,7 +285,6 @@ public class ConCmptBlock extends Configured implements Tool {
 
         public void configure(JobConf job) {
             block_width = Integer.parseInt(job.get("block_width"));
-
             System.out.println("MapStage5 : configure is called.  block_width=" + block_width);
         }
 
@@ -468,14 +452,19 @@ public class ConCmptBlock extends Configured implements Tool {
         conf.setReducerClass(RedStage1.class);
 
         FileInputFormat.setInputPaths(conf, edge_path, curbm_path);
-        FileOutputFormat.setOutputPath(conf, tempbm_path);
-        FileOutputFormat.setCompressOutput(conf, true);
-        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
+        SequenceFileOutputFormat.setOutputPath(conf, tempbm_path);
+        SequenceFileOutputFormat.setCompressOutput(conf, true);
+        //FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
+
+        conf.setOutputFormat(SequenceFileOutputFormat.class);
+        conf.set("mapred.output.compression.type", "BLOCK");
 
         conf.setNumReduceTasks(nreducers);
 
+        conf.setMapOutputKeyClass(LongWritable.class);
+        conf.setMapOutputValueClass(ElemArrayWritable.class);
         conf.setOutputKeyClass(LongWritable.class);
-        conf.setOutputValueClass(Text.class);
+        conf.setOutputValueClass(VectorElemWritable.class);
 
         return conf;
     }
@@ -486,18 +475,23 @@ public class ConCmptBlock extends Configured implements Tool {
         conf.set("block_width", "" + block_width);
         conf.setJobName("ConCmptBlock_pass2");
 
-        conf.setMapperClass(MapStage2.class);
+        conf.setMapperClass(IdentityMapper.class);
         conf.setReducerClass(RedStage2.class);
 
-        FileInputFormat.setInputPaths(conf, tempbm_path);
+        SequenceFileInputFormat.setInputPaths(conf, tempbm_path);
         FileOutputFormat.setOutputPath(conf, nextbm_path);
         FileOutputFormat.setCompressOutput(conf, true);
-        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
+        //FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setNumReduceTasks(nreducers);
 
+        conf.setInputFormat(SequenceFileInputFormat.class);
+        conf.setOutputFormat(SequenceFileOutputFormat.class);
+
+        conf.setMapOutputKeyClass(LongWritable.class);
+        conf.setMapOutputValueClass(VectorElemWritable.class);
         conf.setOutputKeyClass(LongWritable.class);
-        conf.setOutputValueClass(Text.class);
+        conf.setOutputValueClass(VectorElemWritable.class);
 
         return conf;
     }
@@ -516,6 +510,9 @@ public class ConCmptBlock extends Configured implements Tool {
 
         conf.setNumReduceTasks(1);// This is necessary to summarize and save data.
 
+        conf.setInputFormat(SequenceFileInputFormat.class);
+        conf.setOutputFormat(SequenceFileOutputFormat.class);
+
         conf.setOutputKeyClass(Text.class);
         conf.setOutputValueClass(Text.class);
 
@@ -533,7 +530,10 @@ public class ConCmptBlock extends Configured implements Tool {
         FileInputFormat.setInputPaths(conf, curbm_path);
         FileOutputFormat.setOutputPath(conf, curbm_unfold_path);
         FileOutputFormat.setCompressOutput(conf, true);
-        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
+       // FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
+
+        conf.setInputFormat(SequenceFileInputFormat.class);
+        conf.setOutputFormat(SequenceFileOutputFormat.class);
 
         conf.setNumReduceTasks(0);        //This is essential for map-only tasks.
 
@@ -556,7 +556,10 @@ public class ConCmptBlock extends Configured implements Tool {
         FileInputFormat.setInputPaths(conf, curbm_path);
         FileOutputFormat.setOutputPath(conf, summaryout_path);
         FileOutputFormat.setCompressOutput(conf, true);
-        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
+     //   FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
+
+        conf.setInputFormat(SequenceFileInputFormat.class);
+        conf.setOutputFormat(SequenceFileOutputFormat.class);
 
         conf.setNumReduceTasks(nreducers);
 
