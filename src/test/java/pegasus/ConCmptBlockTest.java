@@ -1,20 +1,19 @@
 package pegasus;
 
+import gnu.trove.list.array.TLongArrayList;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mrunit.MapDriver;
 import org.apache.hadoop.mrunit.ReduceDriver;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 
 public class ConCmptBlockTest {
-    MapDriver<LongWritable, Text, LongWritable, ElemArrayWritable> mapDriver;
-    ReduceDriver<LongWritable, ElemArrayWritable, LongWritable, VectorElemWritable> reduceDriver;
 
+    MapDriver<BlockIndexWritable, BlockWritable, LongWritable, BlockWritable> mapDriver;
+    ReduceDriver<LongWritable, BlockWritable, LongWritable, BlockWritable> reduceDriver;
 
     @Before
     public void setUp() {
@@ -23,67 +22,91 @@ public class ConCmptBlockTest {
 
         ConCmptBlock.RedStage1 reducer = new ConCmptBlock.RedStage1();
         reduceDriver = ReduceDriver.newReduceDriver(reducer);
-
     }
 
     @Test
     public void map() throws IOException {
-        mapDriver.addInput(new LongWritable(0), new Text("1\tmsc1 11 2 12 3 13 4 14"));
-        mapDriver.addInput(new LongWritable(1), new Text("1\t2\t1 2 1 3 4 5"));
+        BlockIndexWritable b1 = new BlockIndexWritable();
+        BlockIndexWritable b2 = new BlockIndexWritable();
 
-        ElemArrayWritable v1 = new ElemArrayWritable();
-        v1.addVector((short) 1, 11);
-        v1.addVector((short) 2, 12);
-        v1.addVector((short) 3, 13);
-        v1.addVector((short) 4, 14);
+        BlockWritable d1 = new BlockWritable();
+        BlockWritable d2 = new BlockWritable();
 
-        ElemArrayWritable v2 = new ElemArrayWritable();
-        v2.addBlock((short)2, (short)1, 1);
-        v2.addBlock((short)3, (short)1, 1);
-        v2.addBlock((short)5, (short)4, 1);
+        b1.setVectorIndex(1);
+        d1.setTypeVector(5);
+        d1.setVectorElem(1, 11);
+        d1.setVectorElem(2, 12);
+        d1.setVectorElem(3, 13);
+        d1.setVectorElem(4, 14);
+
+        b2.setMatrixIndex(0, 1);
+        d2.setTypeMatrix();
+        d2.addMatrixElem(1, 2);
+        d2.addMatrixElem(1, 3);
+        d2.addMatrixElem(4, 5);
+
+        mapDriver.addInput(b1, d1);
+        mapDriver.addInput(b2, d2);
+
+        BlockWritable v1 = new BlockWritable();
+        v1.setTypeVector(5);
+        v1.setVectorElem(0, -1);
+        v1.setVectorElem(1, 11);
+        v1.setVectorElem(2, 12);
+        v1.setVectorElem(3, 13);
+        v1.setVectorElem(4, 14);
+
+        BlockWritable v2 = new BlockWritable();
+        v2.setTypeMatrix();
+        v2.setBlockRow(0);
+        v2.addMatrixElem(1, 2);
+        v2.addMatrixElem(1, 3);
+        v2.addMatrixElem(4, 5);
 
         mapDriver.addOutput(new LongWritable(1), v1);
-        mapDriver.addOutput(new LongWritable(2), v2);
+        mapDriver.addOutput(new LongWritable(1), v2);
+
         mapDriver.runTest();
     }
 
     //
-    //     |0 1 0|      |1|        |2|
-    // M = |0 0 1|  V = |2|  res = |3|
-    //     |0 0 0|      |3|        |0|
+    //     |0 1 0|      |0|        |0|
+    // M = |1 0 1|  V = |1|  res = |0|
+    //     |0 1 0|      |2|        |1|
     @Test
     public void reduce() throws IOException {
         reduceDriver.getConfiguration().setInt("block_width", 3);
-        reduceDriver.getConfiguration().setInt("recursive_diagmult", 1);
+        reduceDriver.getConfiguration().setInt("recursive_diagmult", 0);
 
-        ElemArrayWritable e1 = new ElemArrayWritable();
-        e1.addVector((short) 0, 1);
-        e1.addVector((short) 1, 2);
-        e1.addVector((short) 2, 3);
+        int block_col = 1;
 
-        ElemArrayWritable e2 = new ElemArrayWritable();
-        e2.addBlock((short) 0, (short) 1, 1);
-        e2.addBlock((short) 1, (short) 2, 1);
-        e2.setBlockCol(1);
+        BlockWritable e1 = new BlockWritable();
+        e1.setTypeVector(3);
+        e1.setVectorElem(0, 0);
+        e1.setVectorElem(1, 1);
+        e1.setVectorElem(2, 2);
 
-        reduceDriver.addInput(new LongWritable(1), Arrays.asList(e1, e2));
+        BlockWritable e2 = new BlockWritable();
+        e2.setTypeMatrix();
+        e2.addMatrixElem(0, 1);
+        e2.addMatrixElem(1, 0);
+        e2.addMatrixElem(1, 2);
+        e2.addMatrixElem(2, 1);
 
-        VectorElemWritable v1 = new VectorElemWritable();
-        v1.set(VectorElemWritable.TYPE.MSI, new ArrayList<VectorElem>() {{
-            add(new VectorElem((short)0, 1));
-            add(new VectorElem((short)1, 2));
-            add(new VectorElem((short)2, 3));
-        }});
+        e2.setBlockRow(block_col);
 
-        VectorElemWritable v2 = new VectorElemWritable();
-        v2.set(VectorElemWritable.TYPE.MOI, new ArrayList<VectorElem>() {{
-            add(new VectorElem((short)0, 2));
-            add(new VectorElem((short)1, 3));
-        }});
+        reduceDriver.addInput(new LongWritable(block_col), Arrays.asList(e1, e2));
 
+        BlockWritable v1 = new BlockWritable();
+        v1.setVector(BlockWritable.TYPE.MSI, new TLongArrayList(
+                new long[] {0, 1, 2}));
 
-        reduceDriver.addOutput(new LongWritable(1), v1); // initial vector
-        reduceDriver.addOutput(new LongWritable(-1), v2);    // after multiplication
+        BlockWritable v2 = new BlockWritable();
+        v2.setVector(BlockWritable.TYPE.MOI, new TLongArrayList(
+                new long[]{0, 0, 1}));
+
+        reduceDriver.addOutput(new LongWritable(block_col), v1); // initial vector
+        reduceDriver.addOutput(new LongWritable(block_col), v2); // after multiplication
         reduceDriver.runTest();
     }
 }

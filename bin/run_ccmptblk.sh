@@ -22,27 +22,26 @@ if [ $# -ne 4 ]; then
 fi
 
 #### Step 1. Generate Init Vector
-hadoop dfs -rmr cc_initvector
-hadoop jar Pegasus-1.2-SNAPSHOT.jar pegasus.ConCmptIVGen cc_initvector $1 $2
+hadoop dfs -rm -r cc_initvector
+hadoop jar Pegasus-1.3-SNAPSHOT-fatjar.jar pegasus.ConCmptIVGen cc_initvector $1 $2
 
 #### Step 2. Run mv_prep
-hadoop dfs -rmr cc_iv_block
-hadoop dfs -rmr cc_edge_block
+hadoop dfs -rm -r cc_iv_block
+hadoop dfs -rm -r cc_edge_block
 ./run_mvprep.sh cc_initvector cc_iv_block $1 $4 $2 msc makesym
-hadoop dfs -rmr cc_initvector
+hadoop dfs -rm -r cc_initvector
 
 ./run_mvprep.sh $3 cc_edge_block $1 $4 $2 null makesym
 
 #### Step 3. Run pegasus.ConCmptBlock
 rm -rf concmpt_output_temp
-hadoop dfs -rmr concmpt_curbm
-hadoop dfs -rmr concmpt_tempbm
-hadoop dfs -rmr concmpt_nextbm
-hadoop dfs -rmr concmpt_output
-hadoop dfs -rmr concmpt_summaryout
-hadoop dfs -rmr concmpt_curbm_unfold
+hadoop dfs -rm -r concmpt_curbm
+hadoop dfs -rm -r concmpt_tempbm
+hadoop dfs -rm -r concmpt_nextbm
+hadoop dfs -rm -r concmpt_output
+hadoop dfs -rm -r concmpt_summaryout
+hadoop dfs -rm -r concmpt_curbm_unfold
 
-hadoop jar Pegasus-1.2-SNAPSHOT.jar pegasus.ConCmptBlock cc_edge_block cc_iv_block concmpt_tempbm concmpt_nextbm concmpt_output $1 $2 fast $4
+hadoop jar Pegasus-1.3-SNAPSHOT-fatjar.jar pegasus.ConCmptBlock cc_edge_block cc_iv_block concmpt_tempbm concmpt_nextbm concmpt_output $1 $2 fast $4
 
 rm -rf concmpt_output_temp
-

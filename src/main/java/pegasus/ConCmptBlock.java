@@ -24,6 +24,7 @@ package pegasus;
 import java.io.*;
 import java.util.*;
 
+import gnu.trove.list.array.TLongArrayList;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
@@ -39,61 +40,32 @@ public class ConCmptBlock extends Configured implements Tool {
     static int iter_counter = 0;
 
     private static LongWritable KEY = new LongWritable();
-    private static ElemArrayWritable VALUE = new ElemArrayWritable();
+    private static BlockWritable VALUE = new BlockWritable();
 
-
-    //////////////////////////////////////////////////////////////////////
-    // STAGE 1: generate partial block-component ids.
-    //          Hash-join edge and vector by Vector.BLOCKROWID == Edge.BLOCKCOLID where
-    //          vector: key=BLOCKID, value= msu (IN-BLOCK-INDEX VALUE)s
-    //                                      moc
-    //          edge: key=BLOCK-ROW		BLOCK-COL, value=(IN-BLOCK-ROW IN-BLOCK-COL VALUE)s
-    //  - Input: edge_file, component_ids_from_the_last_iteration
-    //  - Output: partial component ids
-    //////////////////////////////////////////////////////////////////////
-    public static class MapStage1 extends MapReduceBase implements Mapper<LongWritable, Text, LongWritable, ElemArrayWritable> {
-        public void map(final LongWritable key, final Text value, final OutputCollector<LongWritable, ElemArrayWritable> output, final Reporter reporter) throws IOException {
-            String line_text = value.toString();
-            if (line_text.startsWith("#"))                // ignore comments in edge file
-                return;
-
-            final String[] line = line_text.split("\t");
-
-            if (line.length < 2)
-                return;
-
-            VALUE.reset();
-
-            long v1 = Long.parseLong(line[0]);
-            if (line.length == 2) {    // vector. component information.
-                KEY.set(v1);
-                String tokens[] = line[1].substring(3).split(" ");
-                for (int i = 0; i < tokens.length; i += 2) {
-                    VALUE.addVector(Short.parseShort(tokens[i]), Long.parseLong(tokens[i + 1]));
-                }
-            } else {                    // edge
-                long v2 = Long.parseLong(line[1]);
-                KEY.set(v2);
-                String tokens[] = line[2].split(" ");
-                VALUE.setBlockCol(v1);
-                for (int i = 0; i < tokens.length; i += 2) {
-                    VALUE.addBlock(Short.parseShort(tokens[i + 1]), Short.parseShort(tokens[i]), 1);
-                }
+    public static class MapStage1 extends MapReduceBase implements Mapper<BlockIndexWritable, BlockWritable, LongWritable, BlockWritable> {
+        public void map(final BlockIndexWritable key, final BlockWritable value, final OutputCollector<LongWritable, BlockWritable> output, final Reporter reporter) throws IOException {
+            VALUE.set(value);
+            if (value.isTypeVector()) {
+                KEY.set(key.getI());
+            }
+            else {
+                KEY.set(key.getJ());
+                VALUE.setBlockRow(key.getI());
             }
             output.collect(KEY, VALUE);
         }
     }
 
-    public static class RedStage1 extends MapReduceBase implements Reducer<LongWritable, ElemArrayWritable, LongWritable, VectorElemWritable> {
+    public static class RedStage1 extends MapReduceBase implements Reducer<LongWritable, BlockWritable, LongWritable, BlockWritable> {
         protected int block_width;
         protected int recursive_diagmult;
 
-        private ArrayList<VectorElem>          vectorArr = null;                                   // save vector
-        private ArrayList<ArrayList<BlockElem>> blockArr = new ArrayList<ArrayList<BlockElem>>();  // save blocks
-        private ArrayList<Long>              blockRowArr = new ArrayList<Long>();    // save block rows(integer)
+        private BlockWritable            vectorArr = null;                           // save vector
+        private ArrayList<BlockWritable> blockArr = new ArrayList<BlockWritable>();  // save blocks
+        private TLongArrayList           blockRowArr = new TLongArrayList();           // save block rows(long)
 
         private LongWritable KEY = new LongWritable();
-        private VectorElemWritable VALUE = new VectorElemWritable();
+        private BlockWritable VALUE = new BlockWritable();
 
         public void configure(JobConf job) {
             block_width = Integer.parseInt(job.get("block_width"));
@@ -101,19 +73,19 @@ public class ConCmptBlock extends Configured implements Tool {
             System.out.println("RedStage1: block_width=" + block_width + ", recursive_diagmult=" + recursive_diagmult);
         }
 
-        public void reduce(final LongWritable key, final Iterator<ElemArrayWritable> values, OutputCollector<LongWritable, VectorElemWritable> output, final Reporter reporter) throws IOException {
+        public void reduce(final LongWritable key, final Iterator<BlockWritable> values, OutputCollector<LongWritable, BlockWritable> output, final Reporter reporter) throws IOException {
             vectorArr = null;
             blockArr.clear();
             blockRowArr.clear();
 
             while (values.hasNext()) {
-                ElemArrayWritable e = values.next();
-                if (!e.getVectors().isEmpty()) {
-                    vectorArr = new ArrayList<VectorElem>(e.getVectors());
+                BlockWritable e = values.next();
+                if (e.isTypeVector()) {
+                    vectorArr = new BlockWritable(e);
                 }
                 else {
-                    blockArr.add(e.getBlocks());
-                    blockRowArr.add(e.getBlockCol());
+                    blockArr.add(e);
+                    blockRowArr.add(e.getBlockRow());
                 }
             }
 
@@ -121,34 +93,19 @@ public class ConCmptBlock extends Configured implements Tool {
                 return;
 
             // output 'self' block to check convergence
-            VALUE.set(VectorElemWritable.TYPE.MSI, vectorArr);
+            VALUE.set(BlockWritable.TYPE.MSI, vectorArr);
             output.collect(key, VALUE);
 
             // For every matrix block, join it with vector and output partial results
-            Iterator<ArrayList<BlockElem>> blockArrIter = blockArr.iterator();
-            Iterator<Long> blockRowIter = blockRowArr.iterator();
-            while (blockArrIter.hasNext()) {
-
-                ArrayList<BlockElem> cur_block = blockArrIter.next();
-                long cur_block_row = blockRowIter.next();
-
-                ArrayList<VectorElem> cur_mult_result = null;
-
-                if (key.get() == cur_block_row && recursive_diagmult == 1) {    // do recursive multiplication
-                    ArrayList<VectorElem> tempVectorArr = vectorArr;
-                    for (int i = 0; i < block_width; i++) {
-                        cur_mult_result = GIMV.minBlockVector(cur_block, tempVectorArr, block_width, 1);
-                        if (cur_mult_result == null || GIMV.compareVectors(tempVectorArr, cur_mult_result) == 0)
-                            break;
-
-                        tempVectorArr = cur_mult_result;
-                    }
-                } else {
-                    cur_mult_result = GIMV.minBlockVector(cur_block, vectorArr, block_width, 0);
-                }
+            Iterator<BlockWritable> blockArrIter = blockArr.iterator();
+            for (int i = 0; i < blockRowArr.size(); i++) {
+                BlockWritable cur_block = blockArrIter.next();
+                long cur_block_row = blockRowArr.get(i);
+                TLongArrayList cur_mult_result = GIMV.minBlockVector(cur_block.getMatrixElemIndexes(),
+                        vectorArr.getVectorElemValues());
                 if (cur_mult_result != null && cur_mult_result.size() > 0) {
                     KEY.set(cur_block_row);
-                    VALUE.set(VectorElemWritable.TYPE.MOI, cur_mult_result);
+                    VALUE.setVector(BlockWritable.TYPE.MOI, cur_mult_result);
                     output.collect(KEY, VALUE);
                 }
             }
@@ -163,37 +120,42 @@ public class ConCmptBlock extends Configured implements Tool {
     //  - Output: combined component ids
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public static class RedStage2 extends MapReduceBase implements Reducer<LongWritable, VectorElemWritable, LongWritable, VectorElemWritable> {
+    public static class RedStage2 extends MapReduceBase implements Reducer<LongWritable, BlockWritable, BlockIndexWritable, BlockWritable> {
         protected int block_width;
 
-        private final VectorElemWritable VALUE = new VectorElemWritable();
+        private final BlockIndexWritable KEY = new BlockIndexWritable();
+        private final BlockWritable VALUE = new BlockWritable();
 
         public void configure(JobConf job) {
             block_width = Integer.parseInt(job.get("block_width"));
             System.out.println("RedStage2: block_width=" + block_width);
         }
 
-        public void reduce(final LongWritable key, final Iterator<VectorElemWritable> values, final OutputCollector<LongWritable, VectorElemWritable> output, final Reporter reporter) throws IOException {
-            ArrayList<VectorElem> self_vector = null;
-            long[] out_vals = new long[block_width];
-            for (int i = 0; i < block_width; i++)
-                out_vals[i] = -1;
+        // Key: block id
+        // Value: list of vector blocks
+        public void reduce(final LongWritable key, final Iterator<BlockWritable> values, final OutputCollector<BlockIndexWritable, BlockWritable> output, final Reporter reporter) throws IOException {
+            BlockWritable self_vector = null;
+            TLongArrayList out_vals = new TLongArrayList(block_width);
+            out_vals.fill(-1);
 
             int n = 0;
             while (values.hasNext()) {
-                VectorElemWritable cur_val = values.next();
+                BlockWritable cur_val = values.next();
 
-                if (cur_val.getType() == VectorElemWritable.TYPE.MSF
-                        || cur_val.getType() == VectorElemWritable.TYPE.MSI)
+                if (cur_val.getType() == BlockWritable.TYPE.MSF
+                        || cur_val.getType() == BlockWritable.TYPE.MSI)
                 {
-                    self_vector = new ArrayList<VectorElem>(cur_val.getVector());
+                    self_vector = new BlockWritable(cur_val);
                 }
 
-                for (VectorElem v_elem : cur_val.getVector()) {
-                    if (out_vals[v_elem.row] == -1)
-                        out_vals[v_elem.row] = v_elem.val;
-                    else if (out_vals[v_elem.row] > v_elem.val)
-                        out_vals[v_elem.row] = v_elem.val;
+                for (int i = 0; i < cur_val.getVectorElemValues().size(); i++) {
+                    long v = cur_val.getVectorElemValues().get(i);
+                    if (out_vals.get(i) == -1) {
+                        out_vals.set(i, v);
+                    }
+                    else if (v < out_vals.get(i))  {
+                        out_vals.set(i, v);
+                    }
                 }
                 n++;
             }
@@ -203,16 +165,17 @@ public class ConCmptBlock extends Configured implements Tool {
                 System.err.println("ERROR: self_vector == null, key=" + key + ", # values" + n);
                 return;
             }
-            ArrayList<VectorElem> new_vector = GIMV.makeLongVectors(out_vals, block_width);
-            VectorElemWritable.TYPE type;
-            if (1 == GIMV.compareVectors(self_vector, new_vector)) {
-                type = VectorElemWritable.TYPE.MSI;
+
+            BlockWritable.TYPE type;
+            if (self_vector.getVectorElemValues().equals(out_vals)) {
+                type = BlockWritable.TYPE.MSF;
             }
             else {
-                type = VectorElemWritable.TYPE.MSF;
+                type = BlockWritable.TYPE.MSI;
             }
-            VALUE.set(type, new_vector);
-            output.collect(key, VALUE);
+            VALUE.setVector(type, out_vals);
+            KEY.setVectorIndex(key.get());
+            output.collect(KEY, VALUE);
         }
     }
 
@@ -221,10 +184,10 @@ public class ConCmptBlock extends Configured implements Tool {
     //  - Input: current component ids
     //  - Output: number_of_changed_nodes
     //////////////////////////////////////////////////////////////////////
-    public static class MapStage3 extends MapReduceBase implements Mapper<LongWritable, VectorElemWritable, Text, Text> {
+    public static class MapStage3 extends MapReduceBase implements Mapper<LongWritable, BlockWritable, Text, Text> {
         // output : f n		( n : # of node whose component didn't change)
         //          i m		( m : # of node whose component changed)
-        public void map(final LongWritable key, final VectorElemWritable value, final OutputCollector<Text, Text> output, final Reporter reporter) throws IOException {
+        public void map(final LongWritable key, final BlockWritable value, final OutputCollector<Text, Text> output, final Reporter reporter) throws IOException {
             char change_prefix = value.getType().toString().toLowerCase().charAt(2);
             output.collect(new Text(Character.toString(change_prefix)), new Text("1"));
         }
@@ -251,7 +214,7 @@ public class ConCmptBlock extends Configured implements Tool {
     //  - Input: the converged component ids
     //  - Output: (node_id, "msu"component_id)
     //////////////////////////////////////////////////////////////////////
-    public static class MapStage4 extends MapReduceBase implements Mapper<LongWritable, VectorElemWritable, LongWritable, Text> {
+    public static class MapStage4 extends MapReduceBase implements Mapper<LongWritable, BlockWritable, LongWritable, Text> {
         int block_width;
 
         public void configure(JobConf job) {
@@ -262,11 +225,11 @@ public class ConCmptBlock extends Configured implements Tool {
 
         // input sample :
         //1       msu0 1 1 1
-        public void map(final LongWritable key, final VectorElemWritable value, final OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
+        public void map(final LongWritable key, final BlockWritable value, final OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
             long block_id = key.get();
-            for (VectorElem e: value.getVector()) {
-                long elem_row = e.row;
-                long component_id = e.val;
+            for (int i = 0; i < value.getVectorElemValues().size(); i++) {
+                long elem_row = i;
+                long component_id = value.getVectorElemValues().get(i);
                 output.collect(new LongWritable(block_width * block_id + elem_row), new Text("msf" + component_id));
             }
         }
@@ -456,15 +419,16 @@ public class ConCmptBlock extends Configured implements Tool {
         SequenceFileOutputFormat.setCompressOutput(conf, true);
         //FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
+        conf.setInputFormat(SequenceFileInputFormat.class);
         conf.setOutputFormat(SequenceFileOutputFormat.class);
         conf.set("mapred.output.compression.type", "BLOCK");
 
         conf.setNumReduceTasks(nreducers);
 
         conf.setMapOutputKeyClass(LongWritable.class);
-        conf.setMapOutputValueClass(ElemArrayWritable.class);
+        conf.setMapOutputValueClass(BlockWritable.class);
         conf.setOutputKeyClass(LongWritable.class);
-        conf.setOutputValueClass(VectorElemWritable.class);
+        conf.setOutputValueClass(BlockWritable.class);
 
         return conf;
     }
@@ -489,9 +453,9 @@ public class ConCmptBlock extends Configured implements Tool {
         conf.setOutputFormat(SequenceFileOutputFormat.class);
 
         conf.setMapOutputKeyClass(LongWritable.class);
-        conf.setMapOutputValueClass(VectorElemWritable.class);
-        conf.setOutputKeyClass(LongWritable.class);
-        conf.setOutputValueClass(VectorElemWritable.class);
+        conf.setMapOutputValueClass(BlockWritable.class);
+        conf.setOutputKeyClass(BlockIndexWritable.class);
+        conf.setOutputValueClass(BlockWritable.class);
 
         return conf;
     }
@@ -511,7 +475,6 @@ public class ConCmptBlock extends Configured implements Tool {
         conf.setNumReduceTasks(1);// This is necessary to summarize and save data.
 
         conf.setInputFormat(SequenceFileInputFormat.class);
-        conf.setOutputFormat(SequenceFileOutputFormat.class);
 
         conf.setOutputKeyClass(Text.class);
         conf.setOutputValueClass(Text.class);
@@ -533,7 +496,6 @@ public class ConCmptBlock extends Configured implements Tool {
        // FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setInputFormat(SequenceFileInputFormat.class);
-        conf.setOutputFormat(SequenceFileOutputFormat.class);
 
         conf.setNumReduceTasks(0);        //This is essential for map-only tasks.
 
@@ -559,7 +521,6 @@ public class ConCmptBlock extends Configured implements Tool {
      //   FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setInputFormat(SequenceFileInputFormat.class);
-        conf.setOutputFormat(SequenceFileOutputFormat.class);
 
         conf.setNumReduceTasks(nreducers);
 
@@ -569,4 +530,3 @@ public class ConCmptBlock extends Configured implements Tool {
         return conf;
     }
 }
-
