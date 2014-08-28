@@ -182,6 +182,8 @@ public class MatvecPrep extends Configured implements Tool {
         SequenceFileOutputFormat.setOutputPath(conf, output_path);
         SequenceFileOutputFormat.setCompressOutput(conf, true);
 //        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
+
+        conf.setOutputFormat(SequenceFileOutputFormat.class);
         conf.set("mapred.output.compression.type", "BLOCK");
 
         conf.setNumReduceTasks(nreducer);
