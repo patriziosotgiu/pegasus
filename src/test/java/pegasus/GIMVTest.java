@@ -22,5 +22,13 @@ public class GIMVTest {
         TLongArrayList res = new TLongArrayList(new long[] {0, 0, 1});
         assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
+
+    @Test
+    public void simple2() throws IOException {
+        TShortArrayList matrixIndexes = new TShortArrayList(new short[] {0, 1, 1, 0, 1, 2, 2, 1, 3, 3});
+        TLongArrayList vectorValues = new TLongArrayList(new long[] {0, 1, 2, 3});
+        TLongArrayList res = new TLongArrayList(new long[] {0, 0, 1, 3});
+        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+    }
 }
 

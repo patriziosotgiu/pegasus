@@ -96,4 +96,16 @@ public class BlockIndexWritable implements WritableComparable<BlockIndexWritable
         }
         return Long.compare(this.j, o.j);
     }
+
+    public static BlockIndexWritable newVectorBlock(int i) {
+        BlockIndexWritable res = new BlockIndexWritable();
+        res.setVectorIndex(i);
+        return res;
+    }
+
+    public static BlockIndexWritable newMatrixBlock(int i, int j) {
+        BlockIndexWritable res = new BlockIndexWritable();
+        res.setMatrixIndex(i, j);
+        return res;
+    }
 }

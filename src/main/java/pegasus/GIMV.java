@@ -29,17 +29,20 @@ public class GIMV {
                                                 TLongArrayList vectorValues)
     {
         TLongArrayList output = new TLongArrayList(vectorValues);
-        int i = 0;
-        while (i < matrixIndexes.size() / 2) {
-            short row = matrixIndexes.get(2 * i);
-            short col = matrixIndexes.get(2 * i + 1);
-            long val = vectorValues.get(col);
-            if (val < output.get(row)) {
-                output.set(row, val);
+        int max = matrixIndexes.size() / 2;
+        for (int i = 0; i < max; i++) {
+            short row = matrixIndexes.getQuick(2 * i);
+            short col = matrixIndexes.getQuick(2 * i + 1);
+            long val = vectorValues.getQuick(col);
+            if (val < output.getQuick(row)) {
+                output.setQuick(row, val);
             }
-            i++;
         }
         return output;
+    }
+
+    public static TLongArrayList minBlockVector(BlockWritable block, BlockWritable vect) {
+        return minBlockVector(block.getMatrixElemIndexes(), vect.getVectorElemValues());
     }
 };
 

@@ -12,16 +12,16 @@ import java.io.IOException;
 public class BlockWritable implements Writable {
 
     public static enum TYPE {
-        NONE(0), MSI(1), MSF(2), MOI(3);
+        NONE(0), INITIAL(1), FINAL(2), INCOMPLETE(3);
         private final short value;
         private TYPE(int v) { value = (short)v; }
         private short getValue() { return value; }
         public static TYPE get(int code) {
             switch(code) {
                 case 0: return NONE;
-                case 1: return MSI;
-                case 2: return MSF;
-                case 3: return MOI;
+                case 1: return INITIAL;
+                case 2: return FINAL;
+                case 3: return INCOMPLETE;
             }
             return null;
         }

@@ -85,7 +85,7 @@ public class MatvecPrep extends Configured implements Tool {
                 {
                     VALUE.reset();
                     VALUE.setTypeMatrix();
-                    VALUE.addMatrixElem((short)in_block_col, (short)in_block_row);
+                    VALUE.addMatrixElem(in_block_col, in_block_row);
                     KEY.setMatrixIndex(block_colid, block_rowid);
                     output.collect(KEY, VALUE);
                 }
@@ -101,17 +101,28 @@ public class MatvecPrep extends Configured implements Tool {
         }
 
         public void reduce(final BlockIndexWritable key, final Iterator<BlockWritable> values, final OutputCollector<BlockIndexWritable, BlockWritable> output, final Reporter reporter) throws IOException {
-            VALUE.reset();
+            boolean init = false;
             while (values.hasNext()) {
                 BlockWritable block = values.next();
                 if (block.isTypeVector()) {
-                    VALUE.setTypeVector(block.getVectorElemValues().size());
+                    if (!init) {
+                        VALUE.reset();
+                        VALUE.setTypeVector(block.getVectorElemValues().size());
+                        init = true;
+                    }
                     for (int i = 0; i < block.getVectorElemValues().size(); i++) {
-                        VALUE.setVectorElem(i, block.getVectorElemValues().get(i));
+                        long v = block.getVectorElemValues().get(i);
+                        if (v != -1L) {
+                            VALUE.setVectorElem(i, v);
+                        }
                     }
                 }
                 else {
-                    VALUE.setTypeMatrix();
+                    if (!init) {
+                        VALUE.reset();
+                        VALUE.setTypeMatrix();
+                        init = true;
+                    }
                     for (int i = 0; i < block.getMatrixElemIndexes().size() / 2; i++) {
                         VALUE.addMatrixElem(
                                 block.getMatrixElemIndexes().get(2 * i),

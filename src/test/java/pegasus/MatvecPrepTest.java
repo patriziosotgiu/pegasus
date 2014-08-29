@@ -35,7 +35,7 @@ public class MatvecPrepTest {
     // 3   x   |   x
     // 4       | x
     @Test
-    public void simple() throws IOException {
+    public void simpleMatrix() throws IOException {
         mrDriver.getConfiguration().set("block_size", "3");
         mrDriver.getConfiguration().set("matrix_row", "6");
         mrDriver.getConfiguration().set("makesym", "1");
@@ -78,6 +78,53 @@ public class MatvecPrepTest {
         mrDriver.addOutput(b3, d3);
         mrDriver.addOutput(b4, d4);
 
+
+        mrDriver.runTest();
+    }
+
+    @Test
+    public void simpleVector() throws IOException {
+        mrDriver.getConfiguration().set("block_size", "3");
+        mrDriver.getConfiguration().set("matrix_row", "7");
+        mrDriver.getConfiguration().set("makesym", "7");
+
+        mrDriver.addInput(new LongWritable(0), new Text("1\tv1"));
+        mrDriver.addInput(new LongWritable(0), new Text("2\tv2"));
+        mrDriver.addInput(new LongWritable(0), new Text("3\tv3"));
+        mrDriver.addInput(new LongWritable(0), new Text("4\tv4"));
+        mrDriver.addInput(new LongWritable(0), new Text("5\tv5"));
+        mrDriver.addInput(new LongWritable(0), new Text("6\tv6"));
+
+        BlockIndexWritable b1 = new BlockIndexWritable();
+        BlockIndexWritable b2 = new BlockIndexWritable();
+        BlockIndexWritable b3 = new BlockIndexWritable();
+
+        BlockWritable d1 = new BlockWritable();
+        BlockWritable d2 = new BlockWritable();
+        BlockWritable d3 = new BlockWritable();
+
+        d1.setTypeVector(3);
+        d2.setTypeVector(3);
+        d3.setTypeVector(3);
+
+        b1.setVectorIndex(0);
+        d1.setVectorElem(0, -1);
+        d1.setVectorElem(1, 1);
+        d1.setVectorElem(2, 2);
+
+        b2.setVectorIndex(1);
+        d2.setVectorElem(0, 3);
+        d2.setVectorElem(1, 4);
+        d2.setVectorElem(2, 5);
+
+        b3.setVectorIndex(2);
+        d3.setVectorElem(0, 6);
+        d3.setVectorElem(1, -1);
+        d3.setVectorElem(2, -1);
+
+        mrDriver.addOutput(b1, d1);
+        mrDriver.addOutput(b2, d2);
+        mrDriver.addOutput(b3, d3);
 
         mrDriver.runTest();
     }
