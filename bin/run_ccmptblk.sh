@@ -22,16 +22,16 @@ if [ $# -ne 4 ]; then
 fi
 
 #### Step 1. Generate Init Vector
-hadoop dfs -rm -r cc_initvector
-hadoop jar Pegasus-1.3-SNAPSHOT-fatjar.jar pegasus.ConCmptIVGen cc_initvector $1 $2
+#hadoop dfs -rm -r cc_initvector
+#hadoop jar Pegasus-1.3-SNAPSHOT-fatjar.jar pegasus.ConCmptIVGen cc_initvector $1 $2
+
 
 #### Step 2. Run mv_prep
-hadoop dfs -rm -r cc_iv_block
-hadoop dfs -rm -r cc_edge_block
-./run_mvprep.sh cc_initvector cc_iv_block $1 $4 $2 msc makesym
-hadoop dfs -rm -r cc_initvector
-
-./run_mvprep.sh $3 cc_edge_block $1 $4 $2 null makesym
+#hadoop dfs -rm -r cc_iv_block
+#hadoop dfs -rm -r cc_edge_block
+#./run_mvprep.sh cc_initvector cc_iv_block $1 $4 $2 msc makesym
+#hadoop dfs -rm -r cc_initvector
+#./run_mvprep.sh $3 cc_edge_block $1 $4 $2 null makesym
 
 #### Step 3. Run pegasus.ConCmptBlock
 rm -rf concmpt_output_temp
