@@ -34,6 +34,7 @@ import org.apache.hadoop.util.*;
 public class ConCmptBlock extends Configured implements Tool {
     public static int MAX_ITERATIONS = 1024;
     public static long changed_nodes[] = new long[MAX_ITERATIONS];
+    public static long unchanged_nodes[] = new long[MAX_ITERATIONS];
 
     static int iter_counter = 0;
 
@@ -397,7 +398,7 @@ public class ConCmptBlock extends Configured implements Tool {
             ResultInfo ri = ConCmpt.readIterationOutput(new_path);
 
             changed_nodes[iter_counter] = ri.changed;
-            changed_nodes[iter_counter] = ri.unchanged;
+            unchanged_nodes[iter_counter] = ri.unchanged;
 
             System.out.println("Hop " + i + " : changed = " + ri.changed + ", unchanged = " + ri.unchanged);
 
