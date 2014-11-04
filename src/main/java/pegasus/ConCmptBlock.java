@@ -376,10 +376,10 @@ public class ConCmptBlock extends Configured implements Tool {
 
         block_width = Integer.parseInt(args[8]);
 
-	max_convergance = Integer.parseInt(args[9]);
+	max_convergence = Integer.parseInt(args[9]);
 	max_iters = Integer.parseInt(args[10]);
 	if (max_iters < 0 || max_iters > MAX_ITERATIONS)
-		max_iters = MAX_ITERATIONS
+		max_iters = MAX_ITERATIONS;
 
         System.out.println("\n-----===[PEGASUS: A Peta-Scale Graph Mining System]===-----\n");
         System.out.println("[PEGASUS] Computing connected component using block method. Reducers = " + nreducers + ", block_width = " + block_width);
@@ -412,7 +412,7 @@ public class ConCmptBlock extends Configured implements Tool {
             // Stop when the minimum neighborhood doesn't change
             if (ri.changed <= max_convergence || i >= max_iters) {
                 System.out.printf("Converging with %d active vertices (%d max for convergence) after %d iterations (%d max).\n", ri.changed, max_convergence, i, max_iters);
-                System.out.prinln("Finishing...");
+                System.out.println("Finishing...");
                 fs.delete(curbm_path);
                 fs.delete(tempbm_path);
                 fs.delete(output_path);
