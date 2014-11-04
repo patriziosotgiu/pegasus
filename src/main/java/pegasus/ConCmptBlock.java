@@ -332,6 +332,8 @@ public class ConCmptBlock extends Configured implements Tool {
     protected int cur_radius = 0;
     protected int block_width = 64;
     protected int recursive_diagmult = 0;
+    protected int max_convergence = 0;
+    protected int max_iters = 0;
 
     // Main entry point.
     public static void main(final String[] args) throws Exception {
@@ -343,7 +345,7 @@ public class ConCmptBlock extends Configured implements Tool {
 
     // Print the command-line usage text.
     protected static int printUsage() {
-        System.out.println("ConCmptBlock <edge_path> <curbm_path> <tempbm_path> <nextbm_path> <output_path> <# of nodes> <# of reducers> <fast or normal> <block_width>");
+        System.out.println("ConCmptBlock <edge_path> <curbm_path> <tempbm_path> <nextbm_path> <output_path> <# of nodes> <# of reducers> <fast or normal> <block_width> <max_convergence> <max_iters>");
 
         ToolRunner.printGenericCommandUsage(System.out);
 
@@ -352,7 +354,7 @@ public class ConCmptBlock extends Configured implements Tool {
 
     // submit the map/reduce job.
     public int run(final String[] args) throws Exception {
-        if (args.length != 9) {
+        if (args.length != 11) {
             return printUsage();
         }
         int i;
@@ -373,6 +375,11 @@ public class ConCmptBlock extends Configured implements Tool {
             recursive_diagmult = 0;
 
         block_width = Integer.parseInt(args[8]);
+
+	max_convergance = Integer.parseInt(args[9]);
+	max_iters = Integer.parseInt(args[10]);
+	if (max_iters < 0 || max_iters > MAX_ITERATIONS)
+		max_iters = MAX_ITERATIONS
 
         System.out.println("\n-----===[PEGASUS: A Peta-Scale Graph Mining System]===-----\n");
         System.out.println("[PEGASUS] Computing connected component using block method. Reducers = " + nreducers + ", block_width = " + block_width);
@@ -403,8 +410,9 @@ public class ConCmptBlock extends Configured implements Tool {
             System.out.println("Hop " + i + " : changed = " + ri.changed + ", unchanged = " + ri.unchanged);
 
             // Stop when the minimum neighborhood doesn't change
-            if (ri.changed == 0) {
-                System.out.println("All the component ids converged. Finishing...");
+            if (ri.changed <= max_convergence || i >= max_iters) {
+                System.out.printf("Converging with %d active vertices (%d max for convergence) after %d iterations (%d max).\n", ri.changed, max_convergence, i, max_iters);
+                System.out.prinln("Finishing...");
                 fs.delete(curbm_path);
                 fs.delete(tempbm_path);
                 fs.delete(output_path);
