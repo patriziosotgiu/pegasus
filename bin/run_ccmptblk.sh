@@ -11,13 +11,15 @@ if test $status -ne 0 ; then
 fi
 
 
-if [ $# -ne 4 ]; then
+if [ $# -ne 6 ]; then
 	 echo 1>&2 Usage: $0 [#_of_nodes] [#_of_reducers] [HDFS edge_file_path] [block_width]
 	 echo 1>&2 [#_of_nodes] : number of nodes in the graph
 	 echo 1>&2 [#_of_reducers] : number of reducers to use in hadoop
 	 echo 1>&2 [HDFS edge_file_path] : HDFS directory where edge file is located
 	 echo 1>&2 [block_width] : block width. usually set to 16.
-	 echo 1>&2    ex: $0 6 3 cc_edge 16
+	 echo 1>&2 [max_convergence] : max number of active vertices for convergence. usually 0.
+	 echo 1>&2 [max_iters] : max number of iterations before convergence.
+	 echo 1>&2    ex: $0 6 3 cc_edge 16 0 1024
 	 exit 127
 fi
 
@@ -42,7 +44,7 @@ hadoop dfs -rmr concmpt_output
 hadoop dfs -rmr concmpt_summaryout
 hadoop dfs -rmr concmpt_curbm_unfold
 
-hadoop jar Pegasus-1.2-SNAPSHOT.jar pegasus.ConCmptBlock cc_edge_block cc_iv_block concmpt_tempbm concmpt_nextbm concmpt_output $1 $2 fast $4
+hadoop jar Pegasus-1.2-SNAPSHOT.jar pegasus.ConCmptBlock cc_edge_block cc_iv_block concmpt_tempbm concmpt_nextbm concmpt_output $1 $2 fast $4 $5 $6
 
 rm -rf concmpt_output_temp
 
