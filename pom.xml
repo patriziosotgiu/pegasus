@@ -45,7 +45,7 @@
                         </goals>
                         <configuration>
                             <descriptors>
-                                <descriptor>src/main/assembly/assembly.xml</descriptor>
+                                <descriptor>src/main/assembly/fatjar.xml</descriptor>
                             </descriptors>
                         </configuration>
                     </execution>
