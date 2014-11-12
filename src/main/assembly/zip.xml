@@ -1,0 +1,22 @@
+<assembly>
+    <formats>
+        <format>zip</format>
+    </formats>
+    <fileSets>
+        <fileSet>
+            <directory>bin/</directory>
+            <outputDirectory>.</outputDirectory>
+        </fileSet>
+    </fileSets>
+    <files>
+        <file>
+            <source>target/${project.build.finalName}.jar</source>
+            <outputDirectory>.</outputDirectory>
+        </file>
+        <file>
+            <source>LICENSE</source>
+            <outputDirectory>.</outputDirectory>
+        </file>
+    </files>
+</assembly>
+
