@@ -37,6 +37,7 @@ public class ConCmptBlock extends Configured implements Tool {
     public static long unchanged_nodes[] = new long[MAX_ITERATIONS];
 
     static int iter_counter = 0;
+    static enum C { NUM_ITERS };
 
 
     //////////////////////////////////////////////////////////////////////
@@ -279,9 +280,11 @@ public class ConCmptBlock extends Configured implements Tool {
         private final LongWritable out_key_int = new LongWritable();
         private final LongWritable out_count_int = new LongWritable(1);
         int block_width;
+        int num_iters;
 
         public void configure(JobConf job) {
             block_width = Integer.parseInt(job.get("block_width"));
+            num_iters = job.getInt("num_iters", -1);
 
             System.out.println("MapStage5 : configure is called.  block_width=" + block_width);
         }
@@ -290,6 +293,7 @@ public class ConCmptBlock extends Configured implements Tool {
             String line_text = value.toString();
             final String[] line = line_text.split("\t");
             final String[] elems = line[1].substring(3).split(" ");
+            reporter.getCounter(C.NUM_ITERS).setValue(num_iters);
 
             for (int i = 0; i < elems.length; i += 2) {
                 long cur_minnode = Long.parseLong(elems[i + 1]);
@@ -539,6 +543,7 @@ public class ConCmptBlock extends Configured implements Tool {
     protected JobConf configStage5() throws Exception {
         final JobConf conf = new JobConf(getConf(), ConCmptBlock.class);
         conf.set("block_width", "" + block_width);
+        conf.setInt("num_iters", iter_counter);
         conf.setJobName("ConCmptBlock_pass5");
 
         conf.setMapperClass(MapStage5.class);
