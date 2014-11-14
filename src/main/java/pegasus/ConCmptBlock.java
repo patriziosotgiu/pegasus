@@ -376,10 +376,12 @@ public class ConCmptBlock extends Configured implements Tool {
 
         block_width = Integer.parseInt(args[8]);
 
-	max_convergence = Integer.parseInt(args[9]);
-	max_iters = Integer.parseInt(args[10]);
-	if (max_iters < 0 || max_iters > MAX_ITERATIONS)
-		max_iters = MAX_ITERATIONS;
+        max_convergence = Integer.parseInt(args[9]);
+        if (max_convergence < 0)
+                max_convergence = 0;
+        max_iters = Integer.parseInt(args[10]);
+        if (max_iters < 0 || max_iters > MAX_ITERATIONS)
+                max_iters = MAX_ITERATIONS;
 
         System.out.println("\n-----===[PEGASUS: A Peta-Scale Graph Mining System]===-----\n");
         System.out.println("[PEGASUS] Computing connected component using block method. Reducers = " + nreducers + ", block_width = " + block_width);
