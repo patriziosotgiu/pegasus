@@ -434,6 +434,19 @@ public class ConCmptBlock extends Configured implements Tool {
         System.out.println("[PEGASUS] Connected component information is saved in the HDFS concmpt_curbm as\n\"node_id	'msf'component_id\" format");
         System.out.println("[PEGASUS] Connected component distribution is saved in the HDFS concmpt_summaryout as\n\"component_id	number_of_nodes\" format.\n");
 
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("num_iters"), "utf-8"));
+            writer.write(Integer.toString(iter_counter));
+            writer.newLine();
+        } catch (IOException e) {
+            System.err.println("[PEGASUS] Failed to write number of iterations to localfile");
+        }
+        try {
+            writer.close();
+        } catch (Exception e) {
+        }
+
         return 0;
     }
 
