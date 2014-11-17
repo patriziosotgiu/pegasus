@@ -441,11 +441,11 @@ public class ConCmptBlock extends Configured implements Tool {
             writer.newLine();
         } catch (IOException e) {
             System.err.println("[PEGASUS] Failed to write number of iterations to localfile");
-        }
-        try {
-            writer.close();
-        } catch (Exception e) {
-        }
+        } finally {
+            try {
+                writer.close();
+            } catch (Exception e) {}
+	}
 
         return 0;
     }
