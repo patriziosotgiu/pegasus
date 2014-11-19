@@ -10,7 +10,7 @@
     </fileSets>
     <files>
         <file>
-            <source>target/${project.build.finalName}.jar</source>
+            <source>target/${project.build.finalName}-fatjar.jar</source>
             <outputDirectory>.</outputDirectory>
         </file>
         <file>
