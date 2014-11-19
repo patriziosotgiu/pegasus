@@ -180,11 +180,21 @@ public class ConCmptBlock extends Configured implements Tool {
     //  - Output: number_of_changed_nodes
     //////////////////////////////////////////////////////////////////////
     public static class MapStage3 extends MapReduceBase implements Mapper<BlockIndexWritable, BlockWritable, Text, Text> {
+
+        private final static Text KEY = new Text();
+        private final static Text VALUE = new Text("1");
+
         // output : f n		( n : # of node whose component didn't change)
         //          i m		( m : # of node whose component changed)
         public void map(final BlockIndexWritable key, final BlockWritable value, final OutputCollector<Text, Text> output, final Reporter reporter) throws IOException {
-            char change_prefix = value.getType().toString().toLowerCase().charAt(2);
-            output.collect(new Text(Character.toString(change_prefix)), new Text("1"));
+            char change_prefix;
+            switch (value.getType()) {
+                case FINAL: change_prefix = 'f'; break;
+                case INCOMPLETE: change_prefix = 'i'; break;
+                default: return; // shouldn't happen
+            }
+            KEY.set(Character.toString(change_prefix));
+            output.collect(KEY, VALUE);
         }
     }
 
@@ -218,7 +228,9 @@ public class ConCmptBlock extends Configured implements Tool {
             long block_id = key.getI();
             for (int i = 0; i < value.getVectorElemValues().size(); i++) {
                 long component_id = value.getVectorElemValues().get(i);
-                output.collect(new LongWritable(block_width * block_id + i), new Text("msf" + component_id));
+                if (component_id >= 0) {
+                    output.collect(new LongWritable(block_width * block_id + i), new Text("msf" + component_id));
+                }
             }
         }
     }
