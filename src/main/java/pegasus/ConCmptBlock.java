@@ -52,6 +52,7 @@ public class ConCmptBlock extends Configured implements Tool {
                 VALUE.setBlockRow(key.getI());
             }
             output.collect(KEY, VALUE);
+            System.out.println("MapStage1.map: " + KEY + ", " + VALUE);
         }
     }
 
@@ -80,6 +81,7 @@ public class ConCmptBlock extends Configured implements Tool {
             // todo: use secondary sorting instead
             while (values.hasNext()) {
                 BlockWritable e = values.next();
+                System.out.println("RedStage1.reduce input value: " + key + "," + e);
                 if (e.isTypeVector()) {
                     initialVector.set(e);
                     gotVectorArr = true;
@@ -96,17 +98,16 @@ public class ConCmptBlock extends Configured implements Tool {
             // output 'self' block to check convergence
             VALUE.set(BlockWritable.TYPE.INITIAL, initialVector);
             output.collect(key, VALUE);
+            System.out.println("RedStage1.reduce: " + key + "," + VALUE);
 
-            // For every matrix block, join it with vector and output partial results
             Iterator<BlockWritable> blockArrIter = blocks.iterator();
             TLongArrayList res;
             for (int i = 0; i < blockRows.size(); i++) {
                 res = GIMV.minBlockVector(blockArrIter.next(), initialVector);
-                if (res != null && res.size() > 0) {  // fixme: don't output if useless vector
-                    KEY.set(blockRows.get(i));
-                    VALUE.setVector(BlockWritable.TYPE.INCOMPLETE, res);
-                    output.collect(KEY, VALUE);
-                }
+                KEY.set(blockRows.get(i));
+                VALUE.setVector(BlockWritable.TYPE.INCOMPLETE, res);
+                output.collect(KEY, VALUE);
+                System.out.println("RedStage1.reduce: " + KEY + "," + VALUE);
             }
         }
     }
@@ -136,24 +137,30 @@ public class ConCmptBlock extends Configured implements Tool {
         // Value: list of vector blocks
         public void reduce(final LongWritable key, final Iterator<BlockWritable> values, final OutputCollector<BlockIndexWritable, BlockWritable> output, final Reporter reporter) throws IOException {
             boolean gotInitialVector = false;
-            res.fill(0, block_width, -1);
+            res.fill(0, block_width, -2);
 
             int n = 0;
+            boolean isInitialVector = true;
             while (values.hasNext()) {
                 BlockWritable block = values.next();
+                System.out.println("RedStage2.reduce input: " + key + "," + block);
 
                 BlockWritable.TYPE t = block.getType();
                 if (t == BlockWritable.TYPE.FINAL || t == BlockWritable.TYPE.INITIAL) {
                     initialVector.set(block);
                     gotInitialVector = true;
+                    isInitialVector = true;
+                }
+                else {
+                    isInitialVector = false;
                 }
 
                 for (int i = 0; i < block.getVectorElemValues().size(); i++) {
                     long v = block.getVectorElemValues().getQuick(i);
-                    if (res.getQuick(i) == -1) {
-                        res.setQuick(i, v);
+                    if (isInitialVector && v == -1L) {
+                        res.setQuick(i, -1L);
                     }
-                    else if (v < res.getQuick(i))  {
+                    else if (v != -1L && (res.getQuick(i) == -2 || v < res.getQuick(i))) {
                         res.setQuick(i, v);
                     }
                 }
@@ -171,6 +178,7 @@ public class ConCmptBlock extends Configured implements Tool {
             VALUE.setVector(type, res);
             KEY.setVectorIndex(key.get());
             output.collect(KEY, VALUE);
+            System.out.println("RedStage2.reduce: " + KEY + "," + VALUE);
         }
     }
 
@@ -195,6 +203,7 @@ public class ConCmptBlock extends Configured implements Tool {
             }
             KEY.set(Character.toString(change_prefix));
             output.collect(KEY, VALUE);
+            System.out.println("MapStage3.map: " + KEY + "," + VALUE);
         }
     }
 
@@ -205,6 +214,7 @@ public class ConCmptBlock extends Configured implements Tool {
                 sum += Long.parseLong(values.next().toString());
             }
             output.collect(key, new Text(Long.toString(sum)));
+            System.out.println("MapStage3.map: " + key + "," + sum);
         }
     }
 

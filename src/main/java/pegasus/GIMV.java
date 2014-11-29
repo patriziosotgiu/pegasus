@@ -33,6 +33,9 @@ public class GIMV {
         int max = matrixIndexes.size() / 2;
         for (int i = 0; i < max; i++) {
             short row = matrixIndexes.getQuick(2 * i);
+            if (vectorValues.getQuick(row) == -1) {
+                continue;
+            }
             short col = matrixIndexes.getQuick(2 * i + 1);
             long val = vectorValues.getQuick(col);
             long currentVal = output.getQuick(row);

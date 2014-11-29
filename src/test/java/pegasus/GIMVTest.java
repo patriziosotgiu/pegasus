@@ -41,5 +41,17 @@ public class GIMVTest {
         TLongArrayList res = new TLongArrayList(new long[] {1, 1});
         assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
+
+    //
+    //     |0 0 0|      |3 |        |3|
+    // M = |0 0 0|  V = |-1|  res = |-1|
+    //     |1 0 0|      |-1|        |-1|
+    @Test
+    public void simple4() throws IOException {
+        TShortArrayList matrixIndexes = new TShortArrayList(new short[] {2, 0});
+        TLongArrayList vectorValues = new TLongArrayList(new long[] {3, -1, -1});
+        TLongArrayList res = new TLongArrayList(new long[] {3, -1, -1});
+        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+    }
 }
 

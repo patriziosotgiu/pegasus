@@ -38,7 +38,7 @@ public class ConCmptBlock2Test {
     //  CX = |1|   DY = |3|
     //
     @Test
-    public void mapReduce2() throws IOException {
+    public void reduce1() throws IOException {
         reduceDriver.getConfiguration().setInt("block_width", 2);
         reduceDriver.getConfiguration().setInt("recursive_diagmult", 0);
 
@@ -54,6 +54,45 @@ public class ConCmptBlock2Test {
 
         reduceDriver.addOutput(blockIndex(0), blockVector(TYPE.INCOMPLETE, 0, 0));
         reduceDriver.addOutput(blockIndex(1), blockVector(TYPE.INCOMPLETE, 0, 1));
+
+        reduceDriver.runTest();
+    }
+
+    //
+    //  |0|    |1|    |3 |   |0|
+    //  |1|  + |0|  + |-1| = |0|
+    //  |3|    |2|    |-1|   |2|
+    //
+    @Test
+    public void reduce2() throws IOException {
+        reduceDriver.getConfiguration().setInt("block_width", 3);
+        reduceDriver.getConfiguration().setInt("recursive_diagmult", 0);
+
+        reduceDriver.addInput(new LongWritable(0), Arrays.asList(
+                blockVector(TYPE.INITIAL, 0, 1, 3),
+                blockVector(TYPE.INCOMPLETE, 1, 0, 2),
+                blockVector(TYPE.INCOMPLETE, 3, -1, -1)));
+
+        reduceDriver.addOutput(blockIndex(0), blockVector(TYPE.INCOMPLETE, 0, 0, 2));
+
+        reduceDriver.runTest();
+    }
+
+    //
+    //  |3|     |2|    |2|
+    //  |-1|  + |1|  = |-1|
+    //  |-1|    |2|    |-1|
+    //
+    @Test
+    public void reduce3() throws IOException {
+        reduceDriver.getConfiguration().setInt("block_width", 3);
+        reduceDriver.getConfiguration().setInt("recursive_diagmult", 0);
+
+        reduceDriver.addInput(new LongWritable(0), Arrays.asList(
+                blockVector(TYPE.INITIAL, 3, -1, -1),
+                blockVector(TYPE.INCOMPLETE, 2, 1, 2)));
+
+        reduceDriver.addOutput(blockIndex(0), blockVector(TYPE.INCOMPLETE, 2, -1, -1));
 
         reduceDriver.runTest();
     }

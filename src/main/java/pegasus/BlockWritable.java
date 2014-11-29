@@ -157,8 +157,9 @@ public class BlockWritable implements Writable {
     public void set(BlockWritable b) {
         type = b.type;
         isVector = b.isVector;
-        matrixElemIndexes.clear();
-        vectorElemValues.clear();
+        blockRow = b.blockRow;
+        matrixElemIndexes.clear();      // resetQuick better ?
+        vectorElemValues.clear();       // resetQuick better ?
         matrixElemIndexes.addAll(b.matrixElemIndexes);
         vectorElemValues.addAll(b.vectorElemValues);
     }
