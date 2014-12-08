@@ -166,7 +166,7 @@ public class ConCmptIVGen extends Configured implements Tool {
     protected JobConf configStage1() throws Exception {
         final JobConf conf = new JobConf(getConf(), ConCmptIVGen.class);
         conf.set("number_nodes", "" + number_nodes);
-        conf.setJobName("ConCmptIVGen_Stage1");
+        conf.setJobName("data-piqid.pegasus.ConCmptIVGen_Stage1");
 
         conf.setMapperClass(MapStage1.class);
         conf.setReducerClass(RedStage1.class);
