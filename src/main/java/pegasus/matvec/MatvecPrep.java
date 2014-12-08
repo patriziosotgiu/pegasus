@@ -245,7 +245,7 @@ public class MatvecPrep extends Configured implements Tool {
         conf.set("matrix_row", "" + number_nodes);
         conf.set("out_prefix", "" + out_prefix);
         conf.set("makesym", "" + makesym);
-        conf.setJobName("MatvecPrep_Stage1");
+        conf.setJobName("data-piqid.pegasus.MatvecPrep_Stage1");
 
         conf.setMapperClass(MapStage1.class);
         conf.setReducerClass(RedStage1.class);

@@ -467,7 +467,7 @@ public class ConCmptBlock extends Configured implements Tool {
         final JobConf conf = new JobConf(getConf(), ConCmptBlock.class);
         conf.set("block_width", "" + block_width);
         conf.set("recursive_diagmult", "" + recursive_diagmult);
-        conf.setJobName("ConCmptBlock_pass1");
+        conf.setJobName("data-piqid.pegasus.ConCmptBlock_pass1");
 
         conf.setMapperClass(MapStage1.class);
         conf.setReducerClass(RedStage1.class);
@@ -489,7 +489,7 @@ public class ConCmptBlock extends Configured implements Tool {
     protected JobConf configStage2() throws Exception {
         final JobConf conf = new JobConf(getConf(), ConCmptBlock.class);
         conf.set("block_width", "" + block_width);
-        conf.setJobName("ConCmptBlock_pass2");
+        conf.setJobName("data-piqid.pegasus.ConCmptBlock_pass2");
 
         conf.setMapperClass(MapStage2.class);
         conf.setReducerClass(RedStage2.class);
@@ -510,7 +510,7 @@ public class ConCmptBlock extends Configured implements Tool {
     // Configure pass3
     protected JobConf configStage3() throws Exception {
         final JobConf conf = new JobConf(getConf(), ConCmptBlock.class);
-        conf.setJobName("ConCmptBlock_pass3");
+        conf.setJobName("data-piqid.pegasus.ConCmptBlock_pass3");
 
         conf.setMapperClass(MapStage3.class);
         conf.setReducerClass(RedStage3.class);
@@ -531,7 +531,7 @@ public class ConCmptBlock extends Configured implements Tool {
     protected JobConf configStage4() throws Exception {
         final JobConf conf = new JobConf(getConf(), ConCmptBlock.class);
         conf.set("block_width", "" + block_width);
-        conf.setJobName("ConCmptBlock_pass4");
+        conf.setJobName("data-piqid.pegasus.ConCmptBlock_pass4");
 
         conf.setMapperClass(MapStage4.class);
 
@@ -552,7 +552,7 @@ public class ConCmptBlock extends Configured implements Tool {
     protected JobConf configStage5() throws Exception {
         final JobConf conf = new JobConf(getConf(), ConCmptBlock.class);
         conf.set("block_width", "" + block_width);
-        conf.setJobName("ConCmptBlock_pass5");
+        conf.setJobName("data-piqid.pegasus.ConCmptBlock_pass5");
 
         conf.setMapperClass(MapStage5.class);
         conf.setReducerClass(RedStage5.class);
