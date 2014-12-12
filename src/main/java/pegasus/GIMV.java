@@ -25,27 +25,27 @@ import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.list.array.TShortArrayList;
 
 public class GIMV {
+    private final static long NO_VALUE = -1L;
+
     public static TLongArrayList minBlockVector(TShortArrayList matrixIndexes,
                                                 TLongArrayList vectorValues)
     {
         TLongArrayList output = new TLongArrayList(vectorValues.size());
-        output.fill(0, vectorValues.size(), -1L);
+        output.fill(0, vectorValues.size(), NO_VALUE);
         int max = matrixIndexes.size() / 2;
         for (int i = 0; i < max; i++) {
             short row = matrixIndexes.getQuick(2 * i);
-            if (vectorValues.getQuick(row) == -1) {
+            if (vectorValues.getQuick(row) == NO_VALUE) {
                 continue;
             }
             short col = matrixIndexes.getQuick(2 * i + 1);
             long val = vectorValues.getQuick(col);
             long currentVal = output.getQuick(row);
-            if (currentVal == -1L || val < currentVal) {
-                output.setQuick(row, val);
-            }
-        }
-        for (int i = 0; i < vectorValues.size(); i++) {
-            if (output.getQuick(i) == -1L) {
-                output.setQuick(i, vectorValues.getQuick(i));
+            if (val != NO_VALUE && (currentVal == NO_VALUE || val < currentVal)) {
+                if (val < vectorValues.getQuick(row))
+                    output.setQuick(row, val);
+                else
+                    output.setQuick(row, vectorValues.getQuick(row));
             }
         }
         return output;

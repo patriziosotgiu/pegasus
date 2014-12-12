@@ -38,10 +38,15 @@ public class ConCmptBlock extends Configured implements Tool {
 
     static int iter_counter = 0;
 
-    private static LongWritable KEY = new LongWritable();
-    private static BlockWritable VALUE = new BlockWritable();
-
+    //
+    // Stage1: group blocks by (matrix_column | vector_row) and compute the *
+    //
+    // TODO: use 2 distinct mappers and multiple input to avoid the if-else condition
     public static class MapStage1 extends MapReduceBase implements Mapper<BlockIndexWritable, BlockWritable, LongWritable, BlockWritable> {
+
+        private static LongWritable  KEY   = new LongWritable();
+        private static BlockWritable VALUE = new BlockWritable();
+
         public void map(final BlockIndexWritable key, final BlockWritable value, final OutputCollector<LongWritable, BlockWritable> output, final Reporter reporter) throws IOException {
             VALUE.set(value);
             if (value.isTypeVector()) {
@@ -58,7 +63,6 @@ public class ConCmptBlock extends Configured implements Tool {
 
     public static class RedStage1 extends MapReduceBase implements Reducer<LongWritable, BlockWritable, LongWritable, BlockWritable> {
         protected int block_width;
-        protected int recursive_diagmult;
 
         private BlockWritable            initialVector = new BlockWritable();
         private ArrayList<BlockWritable> blocks        = new ArrayList<BlockWritable>();
@@ -69,8 +73,7 @@ public class ConCmptBlock extends Configured implements Tool {
 
         public void configure(JobConf job) {
             block_width = Integer.parseInt(job.get("block_width"));
-            recursive_diagmult = Integer.parseInt(job.get("recursive_diagmult"));
-            System.out.println("RedStage1: block_width=" + block_width + ", recursive_diagmult=" + recursive_diagmult);
+            System.out.println("RedStage1: block_width=" + block_width);
         }
 
         public void reduce(final LongWritable key, final Iterator<BlockWritable> values, OutputCollector<LongWritable, BlockWritable> output, final Reporter reporter) throws IOException {
@@ -78,7 +81,7 @@ public class ConCmptBlock extends Configured implements Tool {
             blocks.clear();
             blockRows.clear();
 
-            // todo: use secondary sorting instead
+            // todo: use secondary sorting instead, make sure vector is on top
             while (values.hasNext()) {
                 BlockWritable e = values.next();
                 System.out.println("RedStage1.reduce input value: " + key + "," + e);
@@ -112,12 +115,9 @@ public class ConCmptBlock extends Configured implements Tool {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // STAGE 2 merge partial comonent ids.
-    //  - Input: partial component ids
-    //  - Output: combined component ids
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-
+    //
+    // Stage2: group blocks by row and compute the +
+    //
     public static class RedStage2 extends MapReduceBase implements Reducer<LongWritable, BlockWritable, BlockIndexWritable, BlockWritable> {
         protected int block_width;
 
@@ -133,8 +133,6 @@ public class ConCmptBlock extends Configured implements Tool {
             System.out.println("RedStage2: block_width=" + block_width);
         }
 
-        // Key: block row id
-        // Value: list of vector blocks
         public void reduce(final LongWritable key, final Iterator<BlockWritable> values, final OutputCollector<BlockIndexWritable, BlockWritable> output, final Reporter reporter) throws IOException {
             boolean gotInitialVector = false;
             res.fill(0, block_width, -2);

@@ -60,7 +60,7 @@ public class ConCmptBlock1Test {
     }
 
     //
-    //     |0 1 0|      |0|        |1|
+    //     |0 1 0|      |0|        |0|
     // M = |1 0 1|  V = |1|  res = |0|
     //     |0 1 0|      |2|        |1|
     @Test
@@ -76,7 +76,7 @@ public class ConCmptBlock1Test {
         reduceDriver.addInput(new LongWritable(block_col), Arrays.asList(e1, e2));
 
         BlockWritable v1 = blockVector(BlockWritable.TYPE.INITIAL, 0, 1, 2);
-        BlockWritable v2 = blockVector(BlockWritable.TYPE.INCOMPLETE, 1, 0, 1);
+        BlockWritable v2 = blockVector(BlockWritable.TYPE.INCOMPLETE, 0, 0, 1);
 
         reduceDriver.addOutput(new LongWritable(block_col), v1); // initial vector
         reduceDriver.addOutput(new LongWritable(block_col), v2); // after multiplication
@@ -84,7 +84,7 @@ public class ConCmptBlock1Test {
     }
 
     //
-    //     |0 1 0|      |0|        |1|
+    //     |0 1 0|      |0|        |0|
     // M = |1 0 1|  V = |1|  res = |0|
     //     |0 1 0|      |2|        |1|
     @Test
@@ -96,12 +96,12 @@ public class ConCmptBlock1Test {
         mrDriver.addInput(blockIndex(0, 0), blockMatrix(1, 0, 1, 1, 0, 1, 2, 2, 1));
 
         mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.INITIAL, 0, 1, 2));
-        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.INCOMPLETE, 1, 0, 1));
+        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.INCOMPLETE, 0, 0, 1));
         mrDriver.runTest();
     }
 
     //
-    //     |0 0 0|      |3 |        |3|
+    //     |0 0 0|      | 1|        |-1|
     // M = |0 0 0|  V = |-1|  res = |-1|
     //     |1 0 0|      |-1|        |-1|
     @Test
@@ -117,7 +117,7 @@ public class ConCmptBlock1Test {
         reduceDriver.addInput(new LongWritable(block_col), Arrays.asList(e1, e2));
 
         BlockWritable v1 = blockVector(BlockWritable.TYPE.INITIAL, 3, -1, -1);
-        BlockWritable v2 = blockVector(BlockWritable.TYPE.INCOMPLETE, 3, -1, -1);
+        BlockWritable v2 = blockVector(BlockWritable.TYPE.INCOMPLETE, -1, -1, -1);
 
         reduceDriver.addOutput(new LongWritable(block_col), v1); // initial vector
         reduceDriver.addOutput(new LongWritable(block_col), v2); // after multiplication
@@ -133,17 +133,17 @@ public class ConCmptBlock1Test {
     // M = |A B|      V = |X|  res = |AX| + |BY|
     //     |C D|          |Y|        |CX|   |DY|
     //
-    //  |0 1|   |0|   |1|
+    //  |0 1|   |0|   |0|
     //  |1 0| x |1| = |0|   AX  (row 0)
     //
-    //  |0 0|   |2|   |2|
+    //  |0 0|   |2|   |-1|
     //  |1 0| x |3| = |2|   BY  (row 0)
     //
-    //  |0 1|   |0|   |1|
-    //  |0 0| x |1| = |1|   CX  (row 1)
+    //  |0 1|   |0|   | 0|
+    //  |0 0| x |1| = |-1|   CX  (row 1)
     //
-    //  |0 0|   |2|   |2|
-    //  |0 1| x |3| = |3|   DY  (row 1)
+    //  |0 0|   |2|   |-1|
+    //  |0 1| x |3| = | 3|   DY  (row 1)
     //
 
     @Test
@@ -160,11 +160,11 @@ public class ConCmptBlock1Test {
         mrDriver.addInput(blockIndex(1, 1), blockMatrix(1L, 1, 1));
 
         mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.INITIAL, 0, 1));
-        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.INCOMPLETE, 1, 0));
-        mrDriver.addOutput(new LongWritable(1), blockVector(BlockWritable.TYPE.INCOMPLETE, 1, 1));
+        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.INCOMPLETE, 0, 0));
+        mrDriver.addOutput(new LongWritable(1), blockVector(BlockWritable.TYPE.INCOMPLETE, 0, -1));
         mrDriver.addOutput(new LongWritable(1), blockVector(BlockWritable.TYPE.INITIAL, 2, 3));
-        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.INCOMPLETE, 2, 2));
-        mrDriver.addOutput(new LongWritable(1), blockVector(BlockWritable.TYPE.INCOMPLETE, 2, 3));
+        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.INCOMPLETE, -1, 2));
+        mrDriver.addOutput(new LongWritable(1), blockVector(BlockWritable.TYPE.INCOMPLETE, -1, 3));
 
         mrDriver.runTest();
     }
