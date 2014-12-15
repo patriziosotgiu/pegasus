@@ -14,9 +14,9 @@ import java.util.Arrays;
 
 public class ConCmptBlock1Test {
 
-    MapDriver<BlockIndexWritable, BlockWritable, LongWritable, BlockWritable> mapDriver;
-    ReduceDriver<LongWritable, BlockWritable, LongWritable, BlockWritable> reduceDriver;
-    MapReduceDriver<BlockIndexWritable, BlockWritable, LongWritable, BlockWritable, LongWritable, BlockWritable> mrDriver;
+    MapDriver<BlockIndexWritable, BlockWritable, ConCmptBlock.Stage1JoinKey, BlockWritable> mapDriver;
+    ReduceDriver<ConCmptBlock.Stage1JoinKey, BlockWritable, LongWritable, BlockWritable> reduceDriver;
+    MapReduceDriver<BlockIndexWritable, BlockWritable, ConCmptBlock.Stage1JoinKey, BlockWritable, LongWritable, BlockWritable> mrDriver;
 
 
     @Before
@@ -28,6 +28,7 @@ public class ConCmptBlock1Test {
         reduceDriver = ReduceDriver.newReduceDriver(reducer);
 
         mrDriver = MapReduceDriver.newMapReduceDriver(mapper, reducer);
+        mrDriver.setKeyGroupingComparator(new ConCmptBlock.Stage1GroupComparator());
     }
 
     // group by vector.row and matrix.col
@@ -36,8 +37,8 @@ public class ConCmptBlock1Test {
         mapDriver.addInput(blockIndex(0), blockVector(0, 11, 12, 13, 14));
         mapDriver.addInput(blockIndex(1, 0), blockMatrix(1L, 1, 2, 1, 3, 4, 5));
 
-        mapDriver.addOutput(new LongWritable(0), blockVector(0, 11, 12, 13, 14));
-        mapDriver.addOutput(new LongWritable(0), blockMatrix(1L, 1, 2, 1, 3, 4, 5));
+        mapDriver.addOutput(new ConCmptBlock.Stage1JoinKey(true, 0), blockVector(0, 11, 12, 13, 14));
+        mapDriver.addOutput(new ConCmptBlock.Stage1JoinKey(false, 0), blockMatrix(1L, 1, 2, 1, 3, 4, 5));
 
         mapDriver.runTest();
     }
@@ -53,8 +54,8 @@ public class ConCmptBlock1Test {
         mapDriver.addInput(blockIndex(0), blockVector(0, 1, 2));
         mapDriver.addInput(blockIndex(1, 0), blockMatrix(block_col, 0, 1, 1, 0, 1, 2, 2, 1));
 
-        mapDriver.addOutput(new LongWritable(0), blockVector(0, 1, 2));
-        mapDriver.addOutput(new LongWritable(0), blockMatrix(block_col, 0, 1, 1, 0, 1, 2, 2, 1));
+        mapDriver.addOutput(new ConCmptBlock.Stage1JoinKey(true, 0), blockVector(0, 1, 2));
+        mapDriver.addOutput(new ConCmptBlock.Stage1JoinKey(false, 0), blockMatrix(block_col, 0, 1, 1, 0, 1, 2, 2, 1));
 
         mapDriver.runTest();
     }
@@ -73,7 +74,7 @@ public class ConCmptBlock1Test {
         BlockWritable e1 = blockVector(0, 1, 2);
         BlockWritable e2 = blockMatrix(block_col, 0, 1, 1, 0, 1, 2, 2, 1);
 
-        reduceDriver.addInput(new LongWritable(block_col), Arrays.asList(e1, e2));
+        reduceDriver.addInput(new ConCmptBlock.Stage1JoinKey(true, block_col), Arrays.asList(e1, e2));
 
         BlockWritable v1 = blockVector(BlockWritable.TYPE.INITIAL, 0, 1, 2);
         BlockWritable v2 = blockVector(BlockWritable.TYPE.INCOMPLETE, 0, 0, 1);
@@ -114,7 +115,7 @@ public class ConCmptBlock1Test {
         BlockWritable e1 = blockVector(3, -1, -1);
         BlockWritable e2 = blockMatrix(block_col, 2, 0);
 
-        reduceDriver.addInput(new LongWritable(block_col), Arrays.asList(e1, e2));
+        reduceDriver.addInput(new ConCmptBlock.Stage1JoinKey(true, block_col), Arrays.asList(e1, e2));
 
         BlockWritable v1 = blockVector(BlockWritable.TYPE.INITIAL, 3, -1, -1);
         BlockWritable v2 = blockVector(BlockWritable.TYPE.INCOMPLETE, -1, -1, -1);

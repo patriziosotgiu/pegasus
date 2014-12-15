@@ -24,6 +24,7 @@ package pegasus;
 import java.io.*;
 import java.util.*;
 
+import com.google.common.base.Objects;
 import gnu.trove.list.array.TLongArrayList;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
@@ -41,19 +42,106 @@ public class ConCmptBlock extends Configured implements Tool {
     //
     // Stage1: group blocks by (matrix_column | vector_row) and compute the *
     //
-    // TODO: use 2 distinct mappers and multiple input to avoid the if-else condition
-    public static class MapStage1 extends MapReduceBase implements Mapper<BlockIndexWritable, BlockWritable, LongWritable, BlockWritable> {
+    // Use secondary sorting so that values in the reducers are sorted by types: vector block then matrix blocks.
+    //
 
-        private static LongWritable  KEY   = new LongWritable();
+    public static class Stage1JoinKey implements WritableComparable<Stage1JoinKey> {
+        private boolean isVector;
+        private long index;
+
+        public Stage1JoinKey(boolean isVector, int index) {
+            this.isVector = isVector;
+            this.index = index;
+        }
+
+        public Stage1JoinKey() {
+            this.isVector = false;
+            this.index = -1;
+        }
+
+        @Override
+        public int compareTo(Stage1JoinKey o) {
+            int cmp = Long.compare(index, o.index);
+            if (cmp != 0) {
+                return cmp;
+            }
+            return - Boolean.compare(isVector, o.isVector);
+        }
+
+        @Override
+        public void write(DataOutput dataOutput) throws IOException {
+            dataOutput.writeBoolean(isVector);
+            WritableUtils.writeVLong(dataOutput,index);
+        }
+
+        @Override
+        public void readFields(DataInput dataInput) throws IOException {
+            isVector = dataInput.readBoolean();
+            index = WritableUtils.readVLong(dataInput);
+        }
+
+        public void set(boolean isVector, long index) {
+            this.isVector = isVector;
+            this.index = index;
+        }
+
+        @Override
+        public String toString() {
+            return Objects.toStringHelper(this)
+                    .add("isVector", isVector)
+                    .add("index", index)
+                    .toString();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            Stage1JoinKey that = (Stage1JoinKey) o;
+
+            if (index != that.index) return false;
+            if (isVector != that.isVector) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = (isVector ? 1 : 0);
+            result = 31 * result + (int) (index ^ (index >>> 32));
+            return result;
+        }
+    }
+
+    public static class Stage1GroupComparator extends WritableComparator {
+
+        protected Stage1GroupComparator() {
+            super(Stage1JoinKey.class, true);
+        }
+
+        @Override
+        public int compare(WritableComparable o1, WritableComparable o2) {
+            Stage1JoinKey k1 = (Stage1JoinKey)o1;
+            Stage1JoinKey k2 = (Stage1JoinKey)o2;
+            return Long.compare(k1.index, k2.index);
+        }
+    }
+
+    // TODO: use 2 distinct mappers and multiple input to avoid the if-else condition
+    // output negative key to identify
+    public static class MapStage1 extends MapReduceBase implements Mapper<BlockIndexWritable, BlockWritable, Stage1JoinKey, BlockWritable> {
+
+        private static Stage1JoinKey KEY   = new Stage1JoinKey();
         private static BlockWritable VALUE = new BlockWritable();
 
-        public void map(final BlockIndexWritable key, final BlockWritable value, final OutputCollector<LongWritable, BlockWritable> output, final Reporter reporter) throws IOException {
+        public void map(final BlockIndexWritable key, final BlockWritable value, final OutputCollector<Stage1JoinKey, BlockWritable> output, final Reporter reporter) throws IOException {
             VALUE.set(value);
             if (value.isTypeVector()) {
-                KEY.set(key.getI());
+                KEY.set(true, key.getI());
             }
             else {
-                KEY.set(key.getJ());
+                KEY.set(false, key.getJ());
                 VALUE.setBlockRow(key.getI());
             }
             output.collect(KEY, VALUE);
@@ -61,12 +149,10 @@ public class ConCmptBlock extends Configured implements Tool {
         }
     }
 
-    public static class RedStage1 extends MapReduceBase implements Reducer<LongWritable, BlockWritable, LongWritable, BlockWritable> {
+    public static class RedStage1 extends MapReduceBase implements Reducer<Stage1JoinKey, BlockWritable, LongWritable, BlockWritable> {
         protected int block_width;
 
-        private BlockWritable            initialVector = new BlockWritable();
-        private ArrayList<BlockWritable> blocks        = new ArrayList<BlockWritable>();
-        private TLongArrayList           blockRows     = new TLongArrayList();
+        private BlockWritable initialVector = new BlockWritable();
 
         private LongWritable  KEY   = new LongWritable();
         private BlockWritable VALUE = new BlockWritable();
@@ -76,38 +162,30 @@ public class ConCmptBlock extends Configured implements Tool {
             System.out.println("RedStage1: block_width=" + block_width);
         }
 
-        public void reduce(final LongWritable key, final Iterator<BlockWritable> values, OutputCollector<LongWritable, BlockWritable> output, final Reporter reporter) throws IOException {
-            boolean gotVectorArr = false;
-            blocks.clear();
-            blockRows.clear();
+        public void reduce(final Stage1JoinKey key, final Iterator<BlockWritable> values, OutputCollector<LongWritable, BlockWritable> output, final Reporter reporter) throws IOException {
 
-            // todo: use secondary sorting instead, make sure vector is on top
+            initialVector.set(values.next());
+            System.out.println("RedStage1.reduce input value: " + key + "," + initialVector);
+
+            if (!initialVector.isTypeVector()) {
+                // missing vector... should never happen, right ? throw exception ?
+                System.out.println("error: no vector block");
+                return;
+            }
+
+            VALUE.set(BlockWritable.TYPE.INITIAL, initialVector);
+            KEY.set(key.index);
+            output.collect(KEY, VALUE);
+            System.out.println("RedStage1.reduce: " + KEY + "," + VALUE);
+
+            TLongArrayList res;
+            System.out.println(values.hasNext());
+
             while (values.hasNext()) {
                 BlockWritable e = values.next();
                 System.out.println("RedStage1.reduce input value: " + key + "," + e);
-                if (e.isTypeVector()) {
-                    initialVector.set(e);
-                    gotVectorArr = true;
-                }
-                else {
-                    blocks.add(new BlockWritable(e));
-                    blockRows.add(e.getBlockRow());
-                }
-            }
-
-            if (!gotVectorArr) // missing vector.
-                return;
-
-            // output 'self' block to check convergence
-            VALUE.set(BlockWritable.TYPE.INITIAL, initialVector);
-            output.collect(key, VALUE);
-            System.out.println("RedStage1.reduce: " + key + "," + VALUE);
-
-            Iterator<BlockWritable> blockArrIter = blocks.iterator();
-            TLongArrayList res;
-            for (int i = 0; i < blockRows.size(); i++) {
-                res = GIMV.minBlockVector(blockArrIter.next(), initialVector);
-                KEY.set(blockRows.get(i));
+                res = GIMV.minBlockVector(e, initialVector);
+                KEY.set(e.getBlockRow());
                 VALUE.setVector(BlockWritable.TYPE.INCOMPLETE, res);
                 output.collect(KEY, VALUE);
                 System.out.println("RedStage1.reduce: " + KEY + "," + VALUE);
@@ -414,10 +492,11 @@ public class ConCmptBlock extends Configured implements Tool {
 
         conf.setNumReduceTasks(nreducers);
 
-        conf.setMapOutputKeyClass(LongWritable.class);
+        conf.setMapOutputKeyClass(Stage1JoinKey.class);
         conf.setMapOutputValueClass(BlockWritable.class);
         conf.setOutputKeyClass(LongWritable.class);
         conf.setOutputValueClass(BlockWritable.class);
+        conf.setOutputValueGroupingComparator(Stage1GroupComparator.class);
 
         return conf;
     }
