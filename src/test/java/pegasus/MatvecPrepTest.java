@@ -7,7 +7,6 @@ import org.apache.hadoop.mrunit.ReduceDriver;
 import org.apache.hadoop.mrunit.MapReduceDriver;
 import org.junit.Before;
 import org.junit.Test;
-import pegasus.matvec.MatvecPrep;
 
 import java.io.IOException;
 

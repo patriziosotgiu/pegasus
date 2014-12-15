@@ -20,7 +20,7 @@
  Version: 2.0
  ***********************************************************************/
 
-package pegasus.matvec;
+package pegasus;
 
 import java.io.*;
 import java.util.*;
@@ -31,8 +31,6 @@ import org.apache.hadoop.io.*;
 //import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.*;
-import pegasus.BlockIndexWritable;
-import pegasus.BlockWritable;
 
 public class MatvecPrep extends Configured implements Tool {
 
