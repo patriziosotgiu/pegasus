@@ -35,7 +35,6 @@ import org.apache.hadoop.util.*;
 
 public class ConCmptBlock extends Configured implements Tool {
     public static int MAX_ITERATIONS = 1024;
-    public static long changed_nodes[] = new long[MAX_ITERATIONS];
 
     static int iter_counter = 0;
 
@@ -255,42 +254,7 @@ public class ConCmptBlock extends Configured implements Tool {
             KEY.setVectorIndex(key.get());
             output.collect(KEY, VALUE);
             System.out.println("RedStage2.reduce: " + KEY + "," + VALUE);
-        }
-    }
-
-    //////////////////////////////////////////////////////////////////////
-    // STAGE 3: Calculate number of nodes whose component id changed/unchanged.
-    //  - Input: current component ids
-    //  - Output: number_of_changed_nodes
-    //////////////////////////////////////////////////////////////////////
-    public static class MapStage3 extends MapReduceBase implements Mapper<BlockIndexWritable, BlockWritable, Text, Text> {
-
-        private final static Text KEY = new Text();
-        private final static Text VALUE = new Text("1");
-
-        // output : f n		( n : # of node whose component didn't change)
-        //          i m		( m : # of node whose component changed)
-        public void map(final BlockIndexWritable key, final BlockWritable value, final OutputCollector<Text, Text> output, final Reporter reporter) throws IOException {
-            char change_prefix;
-            switch (value.getType()) {
-                case FINAL: change_prefix = 'f'; break;
-                case INCOMPLETE: change_prefix = 'i'; break;
-                default: return; // shouldn't happen
-            }
-            KEY.set(Character.toString(change_prefix));
-            output.collect(KEY, VALUE);
-            System.out.println("MapStage3.map: " + KEY + "," + VALUE);
-        }
-    }
-
-    public static class RedStage3 extends MapReduceBase implements Reducer<Text, Text, Text, Text> {
-        public void reduce(final Text key, final Iterator<Text> values, final OutputCollector<Text, Text> output, final Reporter reporter) throws IOException {
-            long sum = 0;
-            while (values.hasNext()) {
-                sum += Long.parseLong(values.next().toString());
-            }
-            output.collect(key, new Text(Long.toString(sum)));
-            System.out.println("MapStage3.map: " + key + "," + sum);
+            reporter.incrCounter("change", noChange ? "final" : "incomplete", 1);
         }
     }
 
@@ -418,25 +382,19 @@ public class ConCmptBlock extends Configured implements Tool {
             iter_counter++;
 
             JobClient.runJob(configStage1());
-            JobClient.runJob(configStage2());
-            JobClient.runJob(configStage3());
+            RunningJob j = JobClient.runJob(configStage2());
+
+            long changed = j.getCounters().findCounter("change", "incomplete").getValue();
+            long unchanged = j.getCounters().findCounter("change", "final").getValue();
 
             FileUtil.fullyDelete(FileSystem.getLocal(getConf()), new Path(local_output_path));
 
             final FileSystem fs = FileSystem.get(getConf());
 
-            // copy neighborhood information from HDFS to local disk, and read it!
-            String new_path = local_output_path + "/" + i;
-            fs.copyToLocalFile(output_path, new Path(new_path));
-            ResultInfo ri = ConCmpt.readIterationOutput(new_path);
-
-            changed_nodes[iter_counter] = ri.changed;
-            changed_nodes[iter_counter] = ri.unchanged;
-
-            System.out.println("Hop " + i + " : changed = " + ri.changed + ", unchanged = " + ri.unchanged);
+            System.out.println("Hop " + i + " : changed = " + changed + ", unchanged = " + unchanged);
 
             // Stop when the minimum neighborhood doesn't change
-            if (ri.changed == 0) {
+            if (changed == 0) {
                 System.out.println("All the component ids converged. Finishing...");
                 fs.delete(curbm_path);
                 fs.delete(tempbm_path);
@@ -524,28 +482,6 @@ public class ConCmptBlock extends Configured implements Tool {
         conf.setMapOutputValueClass(BlockWritable.class);
         conf.setOutputKeyClass(BlockIndexWritable.class);
         conf.setOutputValueClass(BlockWritable.class);
-
-        return conf;
-    }
-
-    // Configure pass3
-    protected JobConf configStage3() throws Exception {
-        final JobConf conf = new JobConf(getConf(), ConCmptBlock.class);
-        conf.setJobName("ConCmptBlock_pass3");
-
-        conf.setMapperClass(MapStage3.class);
-        conf.setReducerClass(RedStage3.class);
-        conf.setCombinerClass(RedStage3.class);
-
-        FileInputFormat.setInputPaths(conf, nextbm_path);
-        FileOutputFormat.setOutputPath(conf, output_path);
-
-        conf.setNumReduceTasks(1);// This is necessary to summarize and save data.
-
-        conf.setInputFormat(SequenceFileInputFormat.class);
-
-        conf.setOutputKeyClass(Text.class);
-        conf.setOutputValueClass(Text.class);
 
         return conf;
     }
