@@ -34,18 +34,15 @@ public class GIMV {
         output.fill(0, vectorValues.size(), NO_VALUE);
         int max = matrixIndexes.size() / 2;
         for (int i = 0; i < max; i++) {
-            short row = matrixIndexes.getQuick(2 * i);
-            if (vectorValues.getQuick(row) == NO_VALUE) {
+            short matrixElementRow = matrixIndexes.getQuick(2 * i);
+            if (vectorValues.getQuick(matrixElementRow) == NO_VALUE) {
                 continue;
             }
-            short col = matrixIndexes.getQuick(2 * i + 1);
-            long val = vectorValues.getQuick(col);
-            long currentVal = output.getQuick(row);
+            short matrixElementColumn = matrixIndexes.getQuick(2 * i + 1);
+            long val = vectorValues.getQuick(matrixElementColumn);
+            long currentVal = output.getQuick(matrixElementRow);
             if (val != NO_VALUE && (currentVal == NO_VALUE || val < currentVal)) {
-                if (val < vectorValues.getQuick(row))
-                    output.setQuick(row, val);
-                else
-                    output.setQuick(row, vectorValues.getQuick(row));
+                output.setQuick(matrixElementRow, val);
             }
         }
         return output;
