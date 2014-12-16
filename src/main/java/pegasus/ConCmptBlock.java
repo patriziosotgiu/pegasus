@@ -1,6 +1,7 @@
 /***********************************************************************
  PEGASUS: Peta-Scale Graph Mining System
- Authors: U Kang, Duen Horng Chau, and Christos Faloutsos
+ Copyright (C) 2010 U Kang, Duen Horng Chau, and Christos Faloutsos
+ Copyright (C) 2014 Jerome Serrano <jerome@placeiq.com>
 
  This software is licensed under Apache License, Version 2.0 (the  "License");
  you may not use this file except in compliance with the License.
