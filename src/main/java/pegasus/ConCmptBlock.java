@@ -14,10 +14,6 @@
  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  See the License for the specific language governing permissions and
  limitations under the License.
- -------------------------------------------------------------------------
- File: ConCmptBlock.java
- - HCC: Find Connected Components of graph using block multiplication. This is a block-based version of HCC.
- Version: 2.0
  ***********************************************************************/
 
 package pegasus;
