@@ -2,6 +2,7 @@ package pegasus;
 
 import com.google.common.base.Objects;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableUtils;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -16,19 +17,19 @@ public class BlockIndexWritable implements WritableComparable<BlockIndexWritable
 
     @Override
     public void write(DataOutput dataOutput) throws IOException {
-        dataOutput.writeBoolean(isVector);
-        dataOutput.writeLong(i);
+        WritableUtils.writeVInt(dataOutput, isVector ? 1 : 0);
+        WritableUtils.writeVLong(dataOutput, i);
         if (!isVector) {
-            dataOutput.writeLong(j);
+            WritableUtils.writeVLong(dataOutput, j);
         }
     }
 
     @Override
     public void readFields(DataInput dataInput) throws IOException {
-        isVector = dataInput.readBoolean();
-        i = dataInput.readLong();
+        isVector = WritableUtils.readVInt(dataInput) == 1;
+        i = WritableUtils.readVLong(dataInput);
         if (!isVector) {
-            j = dataInput.readLong();
+            j = WritableUtils.readVLong(dataInput);
         }
     }
 

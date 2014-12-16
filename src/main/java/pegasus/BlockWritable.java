@@ -4,6 +4,7 @@ import com.google.common.base.Objects;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.list.array.TShortArrayList;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -49,17 +50,17 @@ public class BlockWritable implements Writable {
 
     @Override
     public void write(DataOutput dataOutput) throws IOException {
-        dataOutput.writeBoolean(isVector);
+        WritableUtils.writeVInt(dataOutput, isVector ? 1 : 0);
         dataOutput.writeShort(type.getValue());
         if (isVector) {
-            dataOutput.writeInt(vectorElemValues.size());
+            WritableUtils.writeVInt(dataOutput, vectorElemValues.size());
             for (int i = 0; i < vectorElemValues.size(); i++) {
-                dataOutput.writeLong(vectorElemValues.get(i));
+                WritableUtils.writeVLong(dataOutput, vectorElemValues.get(i));
             }
         }
         else {
-            dataOutput.writeLong(blockRow);
-            dataOutput.writeInt(matrixElemIndexes.size());
+            WritableUtils.writeVLong(dataOutput, blockRow);
+            WritableUtils.writeVInt(dataOutput, matrixElemIndexes.size());
             for (int i = 0; i < matrixElemIndexes.size(); i++) {
                 dataOutput.writeShort(matrixElemIndexes.get(i));
             }
@@ -69,17 +70,17 @@ public class BlockWritable implements Writable {
     @Override
     public void readFields(DataInput dataInput) throws IOException {
         reset();
-        isVector = dataInput.readBoolean();
+        isVector = WritableUtils.readVInt(dataInput) == 1;
         type = TYPE.get(dataInput.readShort());
         if (isVector) {
-            int n = dataInput.readInt();
+            int n = WritableUtils.readVInt(dataInput);
             for (int i = 0; i < n; i++) {
-                vectorElemValues.add(dataInput.readLong());
+                vectorElemValues.add(WritableUtils.readVLong(dataInput));
             }
         }
         else {
-            blockRow = dataInput.readLong();
-            int n = dataInput.readInt();
+            blockRow = WritableUtils.readVLong(dataInput);
+            int n = WritableUtils.readVInt(dataInput);
             for (int i = 0; i < n; i++) {
                 matrixElemIndexes.add(dataInput.readShort());
             }
