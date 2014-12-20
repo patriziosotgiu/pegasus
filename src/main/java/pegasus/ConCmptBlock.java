@@ -373,6 +373,8 @@ public class ConCmptBlock extends Configured implements Tool {
 
         local_output_path = args[4] + "_temp";
 
+        final FileSystem fs = FileSystem.get(getConf());
+
         // Iteratively calculate neighborhood function.
         for (i = cur_radius; i < MAX_ITERATIONS; i++) {
             cur_radius++;
@@ -384,9 +386,7 @@ public class ConCmptBlock extends Configured implements Tool {
             long changed = j.getCounters().findCounter("change", "incomplete").getValue();
             long unchanged = j.getCounters().findCounter("change", "final").getValue();
 
-            FileUtil.fullyDelete(FileSystem.getLocal(getConf()), new Path(local_output_path));
-
-            final FileSystem fs = FileSystem.get(getConf());
+            FileUtil.fullyDelete(fs, new Path(local_output_path));
 
             System.out.println("Hop " + i + " : changed = " + changed + ", unchanged = " + unchanged);
 
