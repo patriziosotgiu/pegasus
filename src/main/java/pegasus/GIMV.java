@@ -32,13 +32,10 @@ public class GIMV {
         int max = matrixIndexes.size() / 2;
         for (int i = 0; i < max; i++) {
             short matrixElementRow = matrixIndexes.getQuick(2 * i);
-            if (vectorValues.getQuick(matrixElementRow) == NO_VALUE) {
-                continue;
-            }
             short matrixElementColumn = matrixIndexes.getQuick(2 * i + 1);
             long val = vectorValues.getQuick(matrixElementColumn);
             long currentVal = output.getQuick(matrixElementRow);
-            if (val != NO_VALUE && (currentVal == NO_VALUE || val < currentVal)) {
+            if (val != NO_VALUE && (val < currentVal || currentVal == NO_VALUE)) {
                 output.setQuick(matrixElementRow, val);
             }
         }

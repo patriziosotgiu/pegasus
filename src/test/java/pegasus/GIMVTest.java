@@ -72,12 +72,12 @@ public class GIMVTest {
     //
     //     |0 0 0|      |3 |        |-1|
     // M = |0 0 0|  V = |-1|  res = |-1|
-    //     |1 0 0|      |-1|        |-1|
+    //     |1 0 0|      |-1|        | 3|
     @Test
     public void partVector1() throws IOException {
         TShortArrayList matrixIndexes = new TShortArrayList(new short[] {2, 0});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {3, -1, -1});
-        TLongArrayList res = new TLongArrayList(new long[] {-1, -1, -1});
+        TLongArrayList res = new TLongArrayList(new long[] {-1, -1, 3});
         assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 
@@ -94,26 +94,26 @@ public class GIMVTest {
     }
 
     //
-    //     |1 0 0|      |3 |        |3 |
+    //     |1 0 0|      | 3|        | 3|
     // M = |0 0 0|  V = |-1|  res = |-1|
-    //     |1 0 0|      |-1|        |-1|
+    //     |1 0 0|      |-1|        | 3|
     @Test
     public void partVector3() throws IOException {
         TShortArrayList matrixIndexes = new TShortArrayList(new short[] {0, 0, 2, 0});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {3, -1, -1});
-        TLongArrayList res = new TLongArrayList(new long[] {3, -1, -1});
+        TLongArrayList res = new TLongArrayList(new long[] {3, -1, 3});
         assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 
     //
-    //     |1 1 0|      | 3|        | 3|
+    //     |1 1 0|      | 3|        |-1|
     // M = |0 0 0|  V = |-1|  res = |-1|
-    //     |1 0 0|      |-1|        |-1|
+    //     |1 0 0|      |-1|        | 3|
     @Test
     public void partVector4() throws IOException {
         TShortArrayList matrixIndexes = new TShortArrayList(new short[] {0, 0, 0, 1, 2, 0});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {3, -1, -1});
-        TLongArrayList res = new TLongArrayList(new long[] {3, -1, -1});
+        TLongArrayList res = new TLongArrayList(new long[] {3, -1, 3});
         assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 
@@ -143,13 +143,25 @@ public class GIMVTest {
 
     //
     //     |1 0 0|      | 1|        | 1|
-    // M = |1 0 0|  V = |-1|  res = |-1|
+    // M = |1 0 0|  V = |-1|  res = | 1|
     //     |0 0 0|      |-1|        |-1|
     @Test
     public void partVector7() throws IOException {
         TShortArrayList matrixIndexes = new TShortArrayList(new short[] {0, 0, 1, 0});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {1, -1, -1});
-        TLongArrayList res = new TLongArrayList(new long[] {1, -1, -1});
+        TLongArrayList res = new TLongArrayList(new long[] {1, 1, -1});
+        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+    }
+
+    //
+    //     |0 0 0|      | 4|        |-1|
+    // M = |1 0 0|  V = |-1|  res = | 4|
+    //     |0 0 0|      |-1|        |-1|
+    @Test
+    public void partVector8() throws IOException {
+        TShortArrayList matrixIndexes = new TShortArrayList(new short[] {1, 0});
+        TLongArrayList vectorValues = new TLongArrayList(new long[] {4, -1, -1});
+        TLongArrayList res = new TLongArrayList(new long[] {-1, 4, -1});
         assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 }

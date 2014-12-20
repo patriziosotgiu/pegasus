@@ -121,7 +121,7 @@ public class ConCmptBlock1Test {
     //
     //     |0 0 0|      | 1|        |-1|
     // M = |0 0 0|  V = |-1|  res = |-1|
-    //     |1 0 0|      |-1|        |-1|
+    //     |1 0 0|      |-1|        | 1|
     @Test
     public void reduce2() throws IOException {
         reduceDriver.getConfiguration().setInt("block_width", 3);
@@ -129,13 +129,13 @@ public class ConCmptBlock1Test {
 
         int block_col = 0;
 
-        BlockWritable e1 = blockVector(3, -1, -1);
+        BlockWritable e1 = blockVector(1, -1, -1);
         BlockWritable e2 = blockMatrix(block_col, 2, 0);
 
         reduceDriver.addInput(new ConCmptBlock.Stage1JoinKey(true, block_col), Arrays.asList(e1, e2));
 
-        BlockWritable v1 = blockVector(BlockWritable.TYPE.INITIAL, 3, -1, -1);
-        BlockWritable v2 = blockVector(BlockWritable.TYPE.INCOMPLETE, -1, -1, -1);
+        BlockWritable v1 = blockVector(BlockWritable.TYPE.INITIAL, 1, -1, -1);
+        BlockWritable v2 = blockVector(BlockWritable.TYPE.INCOMPLETE, -1, -1, 1);
 
         reduceDriver.addOutput(new LongWritable(block_col), v1); // initial vector
         reduceDriver.addOutput(new LongWritable(block_col), v2); // after multiplication
