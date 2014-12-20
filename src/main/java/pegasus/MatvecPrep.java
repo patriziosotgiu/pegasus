@@ -24,7 +24,7 @@ import java.util.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
-//import org.apache.hadoop.io.compress.SnappyCodec;
+import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.*;
 
@@ -186,7 +186,6 @@ public class MatvecPrep extends Configured implements Tool {
         FileInputFormat.setInputPaths(conf, edge_path);
         SequenceFileOutputFormat.setOutputPath(conf, output_path);
         SequenceFileOutputFormat.setCompressOutput(conf, true);
-//        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setOutputFormat(SequenceFileOutputFormat.class);
         conf.set("mapred.output.compression.type", "BLOCK");
@@ -198,6 +197,8 @@ public class MatvecPrep extends Configured implements Tool {
 
         conf.setOutputKeyClass(BlockIndexWritable.class);
         conf.setOutputValueClass(BlockWritable.class);
+
+        ConCmptBlock.setCompression(conf);
 
         return conf;
     }

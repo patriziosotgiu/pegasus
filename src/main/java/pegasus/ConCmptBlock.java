@@ -26,11 +26,13 @@ import gnu.trove.list.array.TLongArrayList;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.util.*;
 
 public class ConCmptBlock extends Configured implements Tool {
+
     public static int MAX_ITERATIONS = 1024;
 
     static int iter_counter = 0;
@@ -141,7 +143,7 @@ public class ConCmptBlock extends Configured implements Tool {
                 VALUE.setBlockRow(key.getI());
             }
             output.collect(KEY, VALUE);
-            System.out.println("MapStage1.map: " + KEY + ", " + VALUE);
+            //System.out.println("MapStage1.map: " + KEY + ", " + VALUE);
         }
     }
 
@@ -161,30 +163,27 @@ public class ConCmptBlock extends Configured implements Tool {
         public void reduce(final Stage1JoinKey key, final Iterator<BlockWritable> values, OutputCollector<LongWritable, BlockWritable> output, final Reporter reporter) throws IOException {
 
             initialVector.set(values.next());
-            System.out.println("RedStage1.reduce input value: " + key + "," + initialVector);
+            //System.out.println("RedStage1.reduce input value: " + key + "," + initialVector);
 
             if (!initialVector.isTypeVector()) {
                 // missing vector... should never happen, right ? throw exception ?
-                System.out.println("error: no vector block");
+                reporter.incrCounter("ERROR", "no_vector", 1);
+                System.err.println("error: no vector, key=" + key + ", first_value=" + initialVector);
                 return;
             }
 
             VALUE.set(BlockWritable.TYPE.INITIAL, initialVector);
             KEY.set(key.index);
             output.collect(KEY, VALUE);
-            System.out.println("RedStage1.reduce: " + KEY + "," + VALUE);
-
-            TLongArrayList res;
-            System.out.println(values.hasNext());
+            //System.out.println("RedStage1.reduce: " + KEY + "," + VALUE);
 
             while (values.hasNext()) {
                 BlockWritable e = values.next();
-                System.out.println("RedStage1.reduce input value: " + key + "," + e);
-                res = GIMV.minBlockVector(e, initialVector);
+                //System.out.println("RedStage1.reduce input value: " + key + "," + e + ", initial vector: " + initialVector);
                 KEY.set(e.getBlockRow());
-                VALUE.setVector(BlockWritable.TYPE.INCOMPLETE, res);
+                VALUE.setVector(BlockWritable.TYPE.INCOMPLETE, GIMV.minBlockVector(e, initialVector));
                 output.collect(KEY, VALUE);
-                System.out.println("RedStage1.reduce: " + KEY + "," + VALUE);
+                //System.out.println("RedStage1.reduce: " + KEY + "," + VALUE);
             }
         }
     }
@@ -215,7 +214,7 @@ public class ConCmptBlock extends Configured implements Tool {
             boolean isInitialVector = true;
             while (values.hasNext()) {
                 BlockWritable block = values.next();
-                System.out.println("RedStage2.reduce input: " + key + "," + block);
+                // System.out.println("RedStage2.reduce input: " + key + "," + block);
 
                 BlockWritable.TYPE t = block.getType();
                 if (t == BlockWritable.TYPE.FINAL || t == BlockWritable.TYPE.INITIAL) {
@@ -229,6 +228,8 @@ public class ConCmptBlock extends Configured implements Tool {
 
                 for (int i = 0; i < block.getVectorElemValues().size(); i++) {
                     long v = block.getVectorElemValues().getQuick(i);
+                    // TODO: not efficient, move isInitialVector check outside the loop
+                    // TODO: a bit messy, if block is the initialVector then res will be set to block, usefull ?
                     if (isInitialVector && v == -1L) {
                         res.setQuick(i, -1L);
                     }
@@ -250,7 +251,7 @@ public class ConCmptBlock extends Configured implements Tool {
             VALUE.setVector(type, res);
             KEY.setVectorIndex(key.get());
             output.collect(KEY, VALUE);
-            System.out.println("RedStage2.reduce: " + KEY + "," + VALUE);
+            //System.out.println("RedStage2.reduce: " + KEY + "," + VALUE);
             reporter.incrCounter("change", noChange ? "final" : "incomplete", 1);
         }
     }
@@ -408,6 +409,7 @@ public class ConCmptBlock extends Configured implements Tool {
             fs.delete(curbm_path);
             fs.delete(tempbm_path);
             fs.delete(output_path);
+
             fs.rename(nextbm_path, curbm_path);
         }
 
@@ -439,7 +441,6 @@ public class ConCmptBlock extends Configured implements Tool {
         FileInputFormat.setInputPaths(conf, edge_path, curbm_path);
         SequenceFileOutputFormat.setOutputPath(conf, tempbm_path);
         SequenceFileOutputFormat.setCompressOutput(conf, true);
-        //FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setInputFormat(SequenceFileInputFormat.class);
         conf.setOutputFormat(SequenceFileOutputFormat.class);
@@ -452,6 +453,8 @@ public class ConCmptBlock extends Configured implements Tool {
         conf.setOutputKeyClass(LongWritable.class);
         conf.setOutputValueClass(BlockWritable.class);
         conf.setOutputValueGroupingComparator(Stage1GroupComparator.class);
+
+        setCompression(conf);
 
         return conf;
     }
@@ -468,7 +471,6 @@ public class ConCmptBlock extends Configured implements Tool {
         SequenceFileInputFormat.setInputPaths(conf, tempbm_path);
         FileOutputFormat.setOutputPath(conf, nextbm_path);
         FileOutputFormat.setCompressOutput(conf, true);
-        //FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setNumReduceTasks(nreducers);
 
@@ -480,6 +482,7 @@ public class ConCmptBlock extends Configured implements Tool {
         conf.setOutputKeyClass(BlockIndexWritable.class);
         conf.setOutputValueClass(BlockWritable.class);
 
+        setCompression(conf);
         return conf;
     }
 
@@ -494,7 +497,6 @@ public class ConCmptBlock extends Configured implements Tool {
         FileInputFormat.setInputPaths(conf, curbm_path);
         FileOutputFormat.setOutputPath(conf, curbm_unfold_path);
         FileOutputFormat.setCompressOutput(conf, true);
-       // FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setInputFormat(SequenceFileInputFormat.class);
 
@@ -503,6 +505,7 @@ public class ConCmptBlock extends Configured implements Tool {
         conf.setOutputKeyClass(LongWritable.class);
         conf.setOutputValueClass(Text.class);
 
+        setCompression(conf);
         return conf;
     }
 
@@ -519,7 +522,6 @@ public class ConCmptBlock extends Configured implements Tool {
         FileInputFormat.setInputPaths(conf, curbm_path);
         FileOutputFormat.setOutputPath(conf, summaryout_path);
         FileOutputFormat.setCompressOutput(conf, true);
-     //   FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         conf.setInputFormat(SequenceFileInputFormat.class);
 
@@ -528,6 +530,12 @@ public class ConCmptBlock extends Configured implements Tool {
         conf.setOutputKeyClass(LongWritable.class);
         conf.setOutputValueClass(LongWritable.class);
 
+        setCompression(conf);
         return conf;
+    }
+
+    public static void setCompression(JobConf conf) {
+     //   FileOutputFormat.setOutputCompressorClass(conf, GzipCodec.class);
+         FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
     }
 }
