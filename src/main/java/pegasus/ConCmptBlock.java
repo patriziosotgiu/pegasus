@@ -137,10 +137,12 @@ public class ConCmptBlock extends Configured implements Tool {
             VALUE.set(value);
             if (value.isTypeVector()) {
                 KEY.set(true, key.getI());
+                reporter.incrCounter("PEGASUS", "Number of vector blocks", 1);
             }
             else {
                 KEY.set(false, key.getJ());
                 VALUE.setBlockRow(key.getI());
+                reporter.incrCounter("PEGASUS", "Number of matrix blocks", 1);
             }
             output.collect(KEY, VALUE);
             //System.out.println("MapStage1.map: " + KEY + ", " + VALUE);
