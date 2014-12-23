@@ -83,6 +83,10 @@ public class ConCmptBlock extends Configured implements Tool {
             this.index = index;
         }
 
+        public long getIndex() {
+            return this.index;
+        }
+
         @Override
         public String toString() {
             return Objects.toStringHelper(this)
@@ -123,6 +127,17 @@ public class ConCmptBlock extends Configured implements Tool {
             Stage1JoinKey k1 = (Stage1JoinKey)o1;
             Stage1JoinKey k2 = (Stage1JoinKey)o2;
             return Long.compare(k1.index, k2.index);
+        }
+    }
+
+    public static class Stage1Partioner implements Partitioner<Stage1JoinKey, BlockWritable> {
+
+        public void configure(JobConf job) {}
+
+        public int getPartition(Stage1JoinKey key, BlockWritable value, int numReduceTasks) {
+            long index = key.getIndex();
+            int hashCode = 31 * (int) (index ^ (index >>> 32));
+            return (hashCode & Integer.MAX_VALUE) % numReduceTasks;
         }
     }
 
@@ -455,6 +470,7 @@ public class ConCmptBlock extends Configured implements Tool {
         conf.setOutputKeyClass(LongWritable.class);
         conf.setOutputValueClass(BlockWritable.class);
         conf.setOutputValueGroupingComparator(Stage1GroupComparator.class);
+        conf.setPartitionerClass(Stage1Partioner.class);
 
         setCompression(conf);
 
@@ -538,6 +554,6 @@ public class ConCmptBlock extends Configured implements Tool {
 
     public static void setCompression(JobConf conf) {
      //   FileOutputFormat.setOutputCompressorClass(conf, GzipCodec.class);
-         FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
+     //    FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
     }
 }
