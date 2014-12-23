@@ -29,23 +29,23 @@ import static pegasus.Utils.*;
 import java.io.IOException;
 import java.util.Arrays;
 
-public class ConCmptBlock1Test {
+public class Runner1Test {
 
-    MapDriver<BlockIndexWritable, BlockWritable, ConCmptBlock.Stage1JoinKey, BlockWritable> mapDriver;
-    ReduceDriver<ConCmptBlock.Stage1JoinKey, BlockWritable, LongWritable, BlockWritable> reduceDriver;
-    MapReduceDriver<BlockIndexWritable, BlockWritable, ConCmptBlock.Stage1JoinKey, BlockWritable, LongWritable, BlockWritable> mrDriver;
+    MapDriver<BlockIndexWritable, BlockWritable, Stage1.JoinKey, BlockWritable> mapDriver;
+    ReduceDriver<Stage1.JoinKey, BlockWritable, LongWritable, BlockWritable> reduceDriver;
+    MapReduceDriver<BlockIndexWritable, BlockWritable, Stage1.JoinKey, BlockWritable, LongWritable, BlockWritable> mrDriver;
 
 
     @Before
     public void setUp() {
-        ConCmptBlock.MapStage1 mapper = new ConCmptBlock.MapStage1();
+        Stage1.Mapper1 mapper = new Stage1.Mapper1();
         mapDriver = MapDriver.newMapDriver(mapper);
 
-        ConCmptBlock.RedStage1 reducer = new ConCmptBlock.RedStage1();
+        Stage1.Reducer1 reducer = new Stage1.Reducer1();
         reduceDriver = ReduceDriver.newReduceDriver(reducer);
 
         mrDriver = MapReduceDriver.newMapReduceDriver(mapper, reducer);
-        mrDriver.setKeyGroupingComparator(new ConCmptBlock.Stage1GroupComparator());
+        mrDriver.setKeyGroupingComparator(new Stage1.IndexComparator());
     }
 
     // group by vector.row and matrix.col
@@ -54,8 +54,8 @@ public class ConCmptBlock1Test {
         mapDriver.addInput(blockIndex(0), blockVector(0, 11, 12, 13, 14));
         mapDriver.addInput(blockIndex(1, 0), blockMatrix(1L, 1, 2, 1, 3, 4, 5));
 
-        mapDriver.addOutput(new ConCmptBlock.Stage1JoinKey(true, 0), blockVector(0, 11, 12, 13, 14));
-        mapDriver.addOutput(new ConCmptBlock.Stage1JoinKey(false, 0), blockMatrix(1L, 1, 2, 1, 3, 4, 5));
+        mapDriver.addOutput(new Stage1.JoinKey(true, 0), blockVector(0, 11, 12, 13, 14));
+        mapDriver.addOutput(new Stage1.JoinKey(false, 0), blockMatrix(1L, 1, 2, 1, 3, 4, 5));
 
         mapDriver.runTest();
     }
@@ -71,8 +71,8 @@ public class ConCmptBlock1Test {
         mapDriver.addInput(blockIndex(0), blockVector(0, 1, 2));
         mapDriver.addInput(blockIndex(1, 0), blockMatrix(block_col, 0, 1, 1, 0, 1, 2, 2, 1));
 
-        mapDriver.addOutput(new ConCmptBlock.Stage1JoinKey(true, 0), blockVector(0, 1, 2));
-        mapDriver.addOutput(new ConCmptBlock.Stage1JoinKey(false, 0), blockMatrix(block_col, 0, 1, 1, 0, 1, 2, 2, 1));
+        mapDriver.addOutput(new Stage1.JoinKey(true, 0), blockVector(0, 1, 2));
+        mapDriver.addOutput(new Stage1.JoinKey(false, 0), blockMatrix(block_col, 0, 1, 1, 0, 1, 2, 2, 1));
 
         mapDriver.runTest();
     }
@@ -91,7 +91,7 @@ public class ConCmptBlock1Test {
         BlockWritable e1 = blockVector(0, 1, 2);
         BlockWritable e2 = blockMatrix(block_col, 0, 1, 1, 0, 1, 2, 2, 1);
 
-        reduceDriver.addInput(new ConCmptBlock.Stage1JoinKey(true, block_col), Arrays.asList(e1, e2));
+        reduceDriver.addInput(new Stage1.JoinKey(true, block_col), Arrays.asList(e1, e2));
 
         BlockWritable v1 = blockVector(BlockWritable.TYPE.INITIAL, 0, 1, 2);
         BlockWritable v2 = blockVector(BlockWritable.TYPE.INCOMPLETE, 1, 0, 1);
@@ -132,7 +132,7 @@ public class ConCmptBlock1Test {
         BlockWritable e1 = blockVector(1, -1, -1);
         BlockWritable e2 = blockMatrix(block_col, 2, 0);
 
-        reduceDriver.addInput(new ConCmptBlock.Stage1JoinKey(true, block_col), Arrays.asList(e1, e2));
+        reduceDriver.addInput(new Stage1.JoinKey(true, block_col), Arrays.asList(e1, e2));
 
         BlockWritable v1 = blockVector(BlockWritable.TYPE.INITIAL, 1, -1, -1);
         BlockWritable v2 = blockVector(BlockWritable.TYPE.INCOMPLETE, -1, -1, 1);

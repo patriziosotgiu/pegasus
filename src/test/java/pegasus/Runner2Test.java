@@ -29,12 +29,12 @@ import static pegasus.Utils.*;
 import pegasus.BlockWritable.TYPE;
 
 
-public class ConCmptBlock2Test {
+public class Runner2Test {
     ReduceDriver<LongWritable, BlockWritable, BlockIndexWritable, BlockWritable> reduceDriver;
 
     @Before
     public void setUp() {
-        ConCmptBlock.RedStage2 reducer = new ConCmptBlock.RedStage2();
+        Stage2.Reducer2 reducer = new Stage2.Reducer2();
         reduceDriver = ReduceDriver.newReduceDriver(reducer);
     }
 

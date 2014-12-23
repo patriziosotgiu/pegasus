@@ -24,7 +24,6 @@ import java.util.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.*;
 
@@ -42,7 +41,7 @@ public class MatvecPrep extends Configured implements Tool {
             block_size = Integer.parseInt(job.get("block_size"));
             matrix_row = Long.parseLong(job.get("matrix_row"));
             makesym = Integer.parseInt(job.get("makesym"));
-            System.out.println("MapStage1: block_size = " + block_size + ", matrix_row=" + matrix_row + ", makesym = " + makesym);
+            System.out.println("Mapper1: block_size = " + block_size + ", matrix_row=" + matrix_row + ", makesym = " + makesym);
         }
 
         public void map(final LongWritable key, final Text value, final OutputCollector<BlockIndexWritable, BlockWritable> output, final Reporter reporter) throws IOException {
@@ -91,7 +90,7 @@ public class MatvecPrep extends Configured implements Tool {
         private final BlockWritable VALUE = new BlockWritable();
 
         public void configure(JobConf job) {
-            System.out.println("RedStage1: ");
+            System.out.println("Reducer1: ");
         }
 
         public void reduce(final BlockIndexWritable key, final Iterator<BlockWritable> values, final OutputCollector<BlockIndexWritable, BlockWritable> output, final Reporter reporter) throws IOException {
@@ -198,7 +197,7 @@ public class MatvecPrep extends Configured implements Tool {
         conf.setOutputKeyClass(BlockIndexWritable.class);
         conf.setOutputValueClass(BlockWritable.class);
 
-        ConCmptBlock.setCompression(conf);
+        Runner.setCompression(conf);
 
         return conf;
     }

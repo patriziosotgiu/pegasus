@@ -53,7 +53,7 @@ public class ConCmptIVGen extends Configured implements Tool {
         public void configure(JobConf job) {
             number_nodes = Long.parseLong(job.get("number_nodes"));
 
-            System.out.println("RedStage1: number_nodes = " + number_nodes);
+            System.out.println("Reducer1: number_nodes = " + number_nodes);
         }
 
         public void reduce(final LongWritable key, final Iterator<Text> values, OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
@@ -82,22 +82,17 @@ public class ConCmptIVGen extends Configured implements Tool {
     protected int number_reducers = 1;
     FileSystem fs;
 
-    // Main entry point.
     public static void main(final String[] args) throws Exception {
         final int result = ToolRunner.run(new Configuration(), new ConCmptIVGen(), args);
-
         System.exit(result);
     }
 
-    // Print the command-line usage text.
     protected static int printUsage() {
         System.out.println("ConCmptIVGen <output_path> <# of nodes> <# of machines>");
-
         ToolRunner.printGenericCommandUsage(System.out);
         return -1;
     }
 
-    // submit the map/reduce job.
     public int run(final String[] args) throws Exception {
         if (args.length != 3) {
             return printUsage();
@@ -111,10 +106,8 @@ public class ConCmptIVGen extends Configured implements Tool {
         System.out.println("\n-----===[PEGASUS: A Peta-Scale Graph Mining System]===-----\n");
         System.out.println("[PEGASUS] Generating initial vector. Output path = " + args[0] + ", Number of nodes = " + number_nodes + ", Number of machines =" + number_reducers + "\n");
 
-        // Generate command file and copy to HDFS "input_ConCmptIVGen"
         gen_cmd_file(number_nodes, number_reducers, input_path);
 
-        // run job
         JobClient.runJob(configStage1());
 
         fs = FileSystem.get(getConf());
@@ -152,13 +145,10 @@ public class ConCmptIVGen extends Configured implements Tool {
         out.close();
         System.out.println("done.");
 
-        // copy it to curbm_path, and delete the temporary local file.
         final FileSystem fs = FileSystem.get(getConf());
         fs.copyFromLocalFile(true, new Path("./" + file_name), new Path(input_path.toString() + "/" + file_name));
     }
 
-
-    // Configure pass1
     protected JobConf configStage1() throws Exception {
         final JobConf conf = new JobConf(getConf(), ConCmptIVGen.class);
         conf.set("number_nodes", "" + number_nodes);

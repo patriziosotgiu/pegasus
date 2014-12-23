@@ -33,7 +33,7 @@ hadoop dfs -rm -r cc_edge_block
 hadoop dfs -rm -r cc_initvector
 ./run_mvprep.sh $3 cc_edge_block $1 $4 $2 null makesym
 
-#### Step 3. Run pegasus.ConCmptBlock
+#### Step 3. Run pegasus.Runner
 rm -rf concmpt_output_temp
 hadoop dfs -rm -r concmpt_curbm
 hadoop dfs -rm -r concmpt_tempbm
@@ -42,6 +42,6 @@ hadoop dfs -rm -r concmpt_output
 hadoop dfs -rm -r concmpt_summaryout
 hadoop dfs -rm -r concmpt_curbm_unfold
 
-hadoop jar $JAR pegasus.ConCmptBlock cc_edge_block cc_iv_block concmpt_tempbm concmpt_nextbm concmpt_output $1 $2 fast $4
+hadoop jar $JAR pegasus.Runner cc_edge_block cc_iv_block concmpt_tempbm concmpt_nextbm concmpt_output $1 $2 fast $4
 
 rm -rf concmpt_output_temp
