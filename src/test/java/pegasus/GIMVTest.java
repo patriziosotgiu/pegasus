@@ -36,7 +36,7 @@ public class GIMVTest {
         TIntArrayList matrixIndexes = new TIntArrayList(new int[] {0, 1, 1, 0, 1, 2, 2, 1});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {0, 1, 2});
         TLongArrayList res = new TLongArrayList(new long[] {1, 0, 1});
-        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+        assertEquals(res, Stage1.GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 
     @Test
@@ -44,7 +44,7 @@ public class GIMVTest {
         TIntArrayList matrixIndexes = new TIntArrayList(new int[] {0, 1, 1, 0, 1, 2, 2, 1, 3, 3});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {0, 1, 2, 3});
         TLongArrayList res = new TLongArrayList(new long[] {1, 0, 1, 3});
-        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+        assertEquals(res, Stage1.GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 
     //
@@ -55,7 +55,7 @@ public class GIMVTest {
         TIntArrayList matrixIndexes = new TIntArrayList(new int[] {0, 1, 1, 1});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {0, 1});
         TLongArrayList res = new TLongArrayList(new long[] {1, 1});
-        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+        assertEquals(res, Stage1.GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 
     //
@@ -66,7 +66,7 @@ public class GIMVTest {
         TIntArrayList matrixIndexes = new TIntArrayList(new int[] {0, 1, 1, 0});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {0, 1});
         TLongArrayList res = new TLongArrayList(new long[] {1, 0});
-        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+        assertEquals(res, Stage1.GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 
     //
@@ -78,7 +78,7 @@ public class GIMVTest {
         TIntArrayList matrixIndexes = new TIntArrayList(new int[] {2, 0});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {3, -1, -1});
         TLongArrayList res = new TLongArrayList(new long[] {-1, -1, 3});
-        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+        assertEquals(res, Stage1.GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 
     //
@@ -90,7 +90,7 @@ public class GIMVTest {
         TIntArrayList matrixIndexes = new TIntArrayList(new int[] {2, 0});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {-1, -1, -1});
         TLongArrayList res = new TLongArrayList(new long[] {-1, -1, -1});
-        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+        assertEquals(res, Stage1.GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 
     //
@@ -102,7 +102,7 @@ public class GIMVTest {
         TIntArrayList matrixIndexes = new TIntArrayList(new int[] {0, 0, 2, 0});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {3, -1, -1});
         TLongArrayList res = new TLongArrayList(new long[] {3, -1, 3});
-        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+        assertEquals(res, Stage1.GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 
     //
@@ -114,7 +114,7 @@ public class GIMVTest {
         TIntArrayList matrixIndexes = new TIntArrayList(new int[] {0, 0, 0, 1, 2, 0});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {3, -1, -1});
         TLongArrayList res = new TLongArrayList(new long[] {3, -1, 3});
-        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+        assertEquals(res, Stage1.GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 
     //
@@ -126,7 +126,7 @@ public class GIMVTest {
         TIntArrayList matrixIndexes = new TIntArrayList(new int[] {0, 2});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {0, 1, 2});
         TLongArrayList res = new TLongArrayList(new long[] {2, -1, -1});
-        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+        assertEquals(res, Stage1.GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 
     //
@@ -138,7 +138,7 @@ public class GIMVTest {
         TIntArrayList matrixIndexes = new TIntArrayList(new int[] {0, 0});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {1, -1, -1});
         TLongArrayList res = new TLongArrayList(new long[] {1, -1, -1});
-        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+        assertEquals(res, Stage1.GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 
     //
@@ -150,7 +150,7 @@ public class GIMVTest {
         TIntArrayList matrixIndexes = new TIntArrayList(new int[] {0, 0, 1, 0});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {1, -1, -1});
         TLongArrayList res = new TLongArrayList(new long[] {1, 1, -1});
-        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+        assertEquals(res, Stage1.GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 
     //
@@ -162,7 +162,7 @@ public class GIMVTest {
         TIntArrayList matrixIndexes = new TIntArrayList(new int[] {1, 0});
         TLongArrayList vectorValues = new TLongArrayList(new long[] {4, -1, -1});
         TLongArrayList res = new TLongArrayList(new long[] {-1, 4, -1});
-        assertEquals(res, GIMV.minBlockVector(matrixIndexes, vectorValues));
+        assertEquals(res, Stage1.GIMV.minBlockVector(matrixIndexes, vectorValues));
     }
 }
 

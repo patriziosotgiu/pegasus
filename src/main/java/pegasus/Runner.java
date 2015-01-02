@@ -21,7 +21,6 @@ package pegasus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -34,56 +33,33 @@ public class Runner extends Configured implements Tool {
 
     public static int MAX_ITERATIONS = 1024;
 
-    protected Path edge_path = null;
-    protected Path curbm_path = null;
-    protected Path tempbm_path = null;
-    protected Path nextbm_path = null;
-    protected Path output_path = null;
-    protected Path curbm_unfold_path = null;
-    protected Path summaryout_path = null;
-    protected String local_output_path;
-    protected long number_nodes = 0;
-    protected int nreducers = 1;
+    protected Path pathEdges = null;
+    protected Path pathVector = null;
+    protected Path workDir = null;
+    protected Path pathOutputStage1 = null;
+    protected Path pathOutputStage2 = null;
+    protected Path pathOutputVector = null;
+    protected int numberOfReducers = 1;
     protected int blockWidth = 64;
-    protected int recursive_diagmult = 0;
 
     public static void main(final String[] args) throws Exception {
         final int result = ToolRunner.run(new Configuration(), new Runner(), args);
         System.exit(result);
     }
 
-    protected static int printUsage() {
-        System.out.println("Runner <edge_path> <curbm_path> <tempbm_path> <nextbm_path> <output_path> <# of nodes> <# of reducers> <fast or normal> <block_width>");
-        ToolRunner.printGenericCommandUsage(System.out);
-        return -1;
-    }
-
     public int run(final String[] args) throws Exception {
-        if (args.length != 9) {
-            return printUsage();
-        }
+        pathEdges = new Path(args[0]);
+        pathVector = new Path(args[1]);
+        workDir = new Path(args[2]);
+        pathOutputStage1 = new Path(workDir, "stage1");
+        pathOutputStage2 = new Path(workDir, "stage2");
+        pathOutputVector = new Path(workDir, "result");
+        numberOfReducers = Integer.parseInt(args[3]);
 
-        edge_path = new Path(args[0]);
-        curbm_path = new Path(args[1]);
-        tempbm_path = new Path(args[2]);
-        nextbm_path = new Path(args[3]);
-        output_path = new Path(args[4]);
-        curbm_unfold_path = new Path("concmpt_curbm");
-        summaryout_path = new Path("concmpt_summaryout");
-        number_nodes = Long.parseLong(args[5]);
-        nreducers = Integer.parseInt(args[6]);
-
-        if (args[7].compareTo("fast") == 0)
-            recursive_diagmult = 1;
-        else
-            recursive_diagmult = 0;
-
-        blockWidth = Integer.parseInt(args[8]);
+        blockWidth = Integer.parseInt(args[4]);
 
         System.out.println("\n-----===[PEGASUS: A Peta-Scale Graph Mining System]===-----\n");
-        System.out.println("[PEGASUS] Computing connected component using block method. Reducers = " + nreducers + ", block_width = " + blockWidth);
-
-        local_output_path = args[4] + "_temp";
+        System.out.println("[PEGASUS] Computing connected component using block method. Reducers = " + numberOfReducers + ", block_width = " + blockWidth);
 
         final FileSystem fs = FileSystem.get(getConf());
 
@@ -95,61 +71,44 @@ public class Runner extends Configured implements Tool {
             long changed = j.getCounters().findCounter("change", "incomplete").getValue();
             long unchanged = j.getCounters().findCounter("change", "final").getValue();
 
-            FileUtil.fullyDelete(fs, new Path(local_output_path));
-
             System.out.println("Hop " + n + " : changed = " + changed + ", unchanged = " + unchanged);
 
             if (changed == 0) {
                 System.out.println("All the component ids converged. Finishing...");
-                fs.delete(curbm_path);
-                fs.delete(tempbm_path);
-                fs.delete(output_path);
-                fs.rename(nextbm_path, curbm_path);
-
+                fs.delete(pathOutputStage1, true);
+                fs.delete(pathVector, true);
+                fs.rename(pathOutputStage2, pathVector);
                 System.out.println("Unfolding the block structure for easy lookup...");
-                JobClient.runJob(configStage4());
-
+                JobClient.runJob(configStage3());
                 break;
             }
-
-            fs.delete(curbm_path);
-            fs.delete(tempbm_path);
-            fs.delete(output_path);
-
-            fs.rename(nextbm_path, curbm_path);
+            fs.delete(pathOutputStage1, true);
+            fs.delete(pathVector, true);
+            fs.rename(pathOutputStage2, pathVector);
         }
-
-        FileUtil.fullyDelete(FileSystem.getLocal(getConf()), new Path(local_output_path));
-
-        System.out.println("Summarizing connected components information...");
-        JobClient.runJob(configStage5());
-
         System.out.println("\n[PEGASUS] Connected component computed.");
         System.out.println("[PEGASUS] Total Iteration = " + n);
         System.out.println("[PEGASUS] Connected component information is saved in the HDFS concmpt_curbm as\n\"node_id	'msf'component_id\" format");
-        System.out.println("[PEGASUS] Connected component distribution is saved in the HDFS concmpt_summaryout as\n\"component_id	number_of_nodes\" format.\n");
-
         return 0;
     }
 
     protected JobConf configStage1() throws Exception {
         final JobConf conf = new JobConf(getConf(), Runner.class);
         conf.set("block_width", "" + blockWidth);
-        conf.set("recursive_diagmult", "" + recursive_diagmult);
         conf.setJobName("ConCmptBlock_pass1");
 
         conf.setMapperClass(Stage1.Mapper1.class);
         conf.setReducerClass(Stage1.Reducer1.class);
 
-        FileInputFormat.setInputPaths(conf, edge_path, curbm_path);
-        SequenceFileOutputFormat.setOutputPath(conf, tempbm_path);
+        FileInputFormat.setInputPaths(conf, pathEdges, pathVector);
+        SequenceFileOutputFormat.setOutputPath(conf, pathOutputStage1);
         SequenceFileOutputFormat.setCompressOutput(conf, true);
 
         conf.setInputFormat(SequenceFileInputFormat.class);
         conf.setOutputFormat(SequenceFileOutputFormat.class);
         conf.set("mapred.output.compression.type", "BLOCK");
 
-        conf.setNumReduceTasks(nreducers);
+        conf.setNumReduceTasks(numberOfReducers);
 
         conf.setMapOutputKeyClass(Stage1.JoinKey.class);
         conf.setMapOutputValueClass(BlockWritable.class);
@@ -171,11 +130,11 @@ public class Runner extends Configured implements Tool {
         conf.setMapperClass(IdentityMapper.class);
         conf.setReducerClass(Stage2.Reducer2.class);
 
-        SequenceFileInputFormat.setInputPaths(conf, tempbm_path);
-        FileOutputFormat.setOutputPath(conf, nextbm_path);
+        SequenceFileInputFormat.setInputPaths(conf, pathOutputStage1);
+        FileOutputFormat.setOutputPath(conf, pathOutputStage2);
         FileOutputFormat.setCompressOutput(conf, true);
 
-        conf.setNumReduceTasks(nreducers);
+        conf.setNumReduceTasks(numberOfReducers);
 
         conf.setInputFormat(SequenceFileInputFormat.class);
         conf.setOutputFormat(SequenceFileOutputFormat.class);
@@ -189,15 +148,15 @@ public class Runner extends Configured implements Tool {
         return conf;
     }
 
-    protected JobConf configStage4() throws Exception {
+    protected JobConf configStage3() throws Exception {
         final JobConf conf = new JobConf(getConf(), Runner.class);
         conf.set("block_width", "" + blockWidth);
         conf.setJobName("ConCmptBlock_pass4");
 
         conf.setMapperClass(Stage3.Mapper3.class);
 
-        FileInputFormat.setInputPaths(conf, curbm_path);
-        FileOutputFormat.setOutputPath(conf, curbm_unfold_path);
+        FileInputFormat.setInputPaths(conf, pathVector);
+        FileOutputFormat.setOutputPath(conf, pathOutputVector);
         FileOutputFormat.setCompressOutput(conf, true);
 
         conf.setInputFormat(SequenceFileInputFormat.class);
@@ -206,30 +165,6 @@ public class Runner extends Configured implements Tool {
 
         conf.setOutputKeyClass(LongWritable.class);
         conf.setOutputValueClass(Text.class);
-
-        setCompression(conf);
-        return conf;
-    }
-
-    protected JobConf configStage5() throws Exception {
-        final JobConf conf = new JobConf(getConf(), Runner.class);
-        conf.set("block_width", "" + blockWidth);
-        conf.setJobName("ConCmptBlock_pass5");
-
-        conf.setMapperClass(Stage4.Mapper4.class);
-        conf.setReducerClass(Stage4.Reducer4.class);
-        conf.setCombinerClass(Stage4.Reducer4.class);
-
-        FileInputFormat.setInputPaths(conf, curbm_path);
-        FileOutputFormat.setOutputPath(conf, summaryout_path);
-        FileOutputFormat.setCompressOutput(conf, true);
-
-        conf.setInputFormat(SequenceFileInputFormat.class);
-
-        conf.setNumReduceTasks(nreducers);
-
-        conf.setOutputKeyClass(LongWritable.class);
-        conf.setOutputValueClass(LongWritable.class);
 
         setCompression(conf);
         return conf;

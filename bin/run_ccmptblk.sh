@@ -1,47 +1,15 @@
-# Program : run_ccmptblk.sh
-# Description : Run HCC-BLOCK, a block version of HCC
-
 JAR=../target/Pegasus-1.3-SNAPSHOT-fatjar.jar
-which hadoop > /dev/null
-status=$?
-if test $status -ne 0 ; then
-	echo ""
-	echo "Hadoop is not installed in the system."
-	echo "Please install Hadoop and make sure the hadoop binary is accessible."
-	exit 127
-fi
 
+WORK_DIR=pegasus_work
 
-if [ $# -ne 4 ]; then
-	 echo 1>&2 Usage: $0 [#_of_nodes] [#_of_reducers] [HDFS edge_file_path] [block_width]
-	 echo 1>&2 [#_of_nodes] : number of nodes in the graph
-	 echo 1>&2 [#_of_reducers] : number of reducers to use in hadoop
-	 echo 1>&2 [HDFS edge_file_path] : HDFS directory where edge file is located
-	 echo 1>&2 [block_width] : block width. usually set to 16.
-	 echo 1>&2    ex: $0 6 3 cc_edge 16
-	 exit 127
-fi
+N_NODES=$1
+N_REDUCERS=$2
+INPUT_EDGES=$3
+BLOCK_SIZE=$4
 
-#### Step 1. Generate Init Vector
-hadoop dfs -rm -r cc_initvector
-hadoop jar $JAR pegasus.ConCmptIVGen cc_initvector $1 $2
+hadoop dfs -rm -r $WORK_DIR
 
-#### Step 2. Run mv_prep
-hadoop dfs -rm -r cc_iv_block
-hadoop dfs -rm -r cc_edge_block
-./run_mvprep.sh cc_initvector cc_iv_block $1 $4 $2 msc makesym
-hadoop dfs -rm -r cc_initvector
-./run_mvprep.sh $3 cc_edge_block $1 $4 $2 null makesym
-
-#### Step 3. Run pegasus.Runner
-rm -rf concmpt_output_temp
-hadoop dfs -rm -r concmpt_curbm
-hadoop dfs -rm -r concmpt_tempbm
-hadoop dfs -rm -r concmpt_nextbm
-hadoop dfs -rm -r concmpt_output
-hadoop dfs -rm -r concmpt_summaryout
-hadoop dfs -rm -r concmpt_curbm_unfold
-
-hadoop jar $JAR pegasus.Runner cc_edge_block cc_iv_block concmpt_tempbm concmpt_nextbm concmpt_output $1 $2 fast $4
-
-rm -rf concmpt_output_temp
+hadoop jar $JAR pegasus.ConCmptIVGen $WORK_DIR/initial_vector $N_NODES $N_REDUCERS
+hadoop jar $JAR pegasus.MatvecPrep $WORK_DIR/initial_vector $WORK_DIR/vector_blocks $BLOCK_SIZE $N_REDUCERS vector
+hadoop jar $JAR pegasus.MatvecPrep $INPUT_EDGES $WORK_DIR/edge_blocks $BLOCK_SIZE $N_REDUCERS matrix
+hadoop jar $JAR pegasus.Runner $WORK_DIR/edge_blocks $WORK_DIR/vector_blocks $WORK_DIR $N_REDUCERS $BLOCK_SIZE

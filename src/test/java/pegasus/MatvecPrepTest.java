@@ -99,12 +99,12 @@ public class MatvecPrepTest {
         mrDriver.getConfiguration().set("makesym", "7");
         mrDriver.getConfiguration().setBoolean("isVector", true);
 
-        mrDriver.addInput(new LongWritable(0), new Text("1\tv1"));
-        mrDriver.addInput(new LongWritable(0), new Text("2\tv2"));
-        mrDriver.addInput(new LongWritable(0), new Text("3\tv3"));
-        mrDriver.addInput(new LongWritable(0), new Text("4\tv4"));
-        mrDriver.addInput(new LongWritable(0), new Text("5\tv5"));
-        mrDriver.addInput(new LongWritable(0), new Text("6\tv6"));
+        mrDriver.addInput(new LongWritable(0), new Text("1\t1"));
+        mrDriver.addInput(new LongWritable(0), new Text("2\t2"));
+        mrDriver.addInput(new LongWritable(0), new Text("3\t3"));
+        mrDriver.addInput(new LongWritable(0), new Text("4\t4"));
+        mrDriver.addInput(new LongWritable(0), new Text("5\t5"));
+        mrDriver.addInput(new LongWritable(0), new Text("6\t6"));
 
         BlockIndexWritable b1 = new BlockIndexWritable();
         BlockIndexWritable b2 = new BlockIndexWritable();

@@ -116,8 +116,9 @@ public class MatvecPrep extends Configured implements Tool {
 
 
     public static class MapStage1 extends MapReduceBase implements Mapper<LongWritable, Text, BlockIndexWritable, LightBlockWritable> {
-        int block_size;
-        int makesym;
+        private int block_size;
+        private int makesym;
+        private boolean isVector;
 
         private final BlockIndexWritable KEY = new BlockIndexWritable();
         private final LightBlockWritable VALUE = new LightBlockWritable();
@@ -125,20 +126,19 @@ public class MatvecPrep extends Configured implements Tool {
         public void configure(JobConf job) {
             block_size = Integer.parseInt(job.get("block_size"));
             makesym = Integer.parseInt(job.get("makesym"));
+            isVector = job.getBoolean("isVector", false);
             System.out.println("MapStage1: block_size = " + block_size + ", makesym = " + makesym);
         }
 
         public void map(final LongWritable key, final Text value, final OutputCollector<BlockIndexWritable, LightBlockWritable> output, final Reporter reporter) throws IOException {
-            String line_text = value.toString();
+            String[] line = value.toString().split("\t");
 
-            final String[] line = line_text.split("\t");
-
-            if (line[1].charAt(0) == 'v') {
+            if (isVector) {
                 long row_id = Long.parseLong(line[0]);
                 long block_id = row_id / block_size;
                 long in_block_index = row_id % block_size;
 
-                VALUE.setVector((int)in_block_index, Long.parseLong(line[1].substring(1)));
+                VALUE.setVector((int)in_block_index, Long.parseLong(line[1]));
                 KEY.setVectorIndex(block_id);
                 output.collect(KEY, VALUE);
             } else {
@@ -170,20 +170,13 @@ public class MatvecPrep extends Configured implements Tool {
 
     public static class RedStage1 extends MapReduceBase implements Reducer<BlockIndexWritable, LightBlockWritable, BlockIndexWritable, BlockWritable> {
         private BlockWritable VALUE = null;
-
-        int blockSize;
-        boolean isVector;
+        private int blockSize;
+        private boolean isVector;
 
         public void configure(JobConf job) {
             blockSize = Integer.parseInt(job.get("block_size"));
             isVector = job.getBoolean("isVector", false);
-
-            if (isVector) {
-                VALUE = new BlockWritable(blockSize, BlockWritable.TYPE.VECTOR_INITIAL);
-            }
-            else {
-                VALUE = new BlockWritable(blockSize, BlockWritable.TYPE.MATRIX);
-            }
+            VALUE = new BlockWritable(blockSize, isVector ? BlockWritable.TYPE.VECTOR_INITIAL : BlockWritable.TYPE.MATRIX);
         }
 
         public void reduce(final BlockIndexWritable key, final Iterator<LightBlockWritable> values, final OutputCollector<BlockIndexWritable, BlockWritable> output, final Reporter reporter) throws IOException {
@@ -211,9 +204,8 @@ public class MatvecPrep extends Configured implements Tool {
         }
     }
 
-    protected Path edge_path = null;
-    protected Path output_path = null;
-    protected long number_nodes = 0;
+    protected Path pathEdges = null;
+    protected Path pathOutput = null;
     protected int block_size = 1;
     protected int nreducer = 1;
     protected String output_prefix;
@@ -225,25 +217,14 @@ public class MatvecPrep extends Configured implements Tool {
         System.exit(result);
     }
 
-    protected static int printUsage() {
-        System.out.println("MatvecPrep <edge_path> <outputedge_path> <# of row> <block width> <# of reducer> <out_prefix or null> <makesym or nosym>");
-        ToolRunner.printGenericCommandUsage(System.out);
-        return -1;
-    }
-
     public int run(final String[] args) throws Exception {
-        if (args.length != 8) {
-            return printUsage();
-        }
+        pathEdges = new Path(args[0]);
+        pathOutput = new Path(args[1]);
+        block_size = Integer.parseInt(args[2]);
+        nreducer = Integer.parseInt(args[3]);
 
-        edge_path = new Path(args[0]);
-        output_path = new Path(args[1]);
-        number_nodes = Long.parseLong(args[2]);    // number of row of matrix
-        block_size = Integer.parseInt(args[3]);
-        nreducer = Integer.parseInt(args[4]);
-
-        makesym = (args[6].compareTo("makesym") == 0) ? 1 : 0;
-        isVector = args[7].equals("vector");
+        makesym = 1;
+        isVector = args[4].equals("vector");
 
         System.out.println("\n-----===[PEGASUS: A Peta-Scale Graph Mining System]===-----\n");
         System.out.println("[PEGASUS] Converting the adjacency matrix to block format. Output_prefix = " + output_prefix + ", makesym = " + makesym + ", block width=" + block_size + "\n");
@@ -258,7 +239,6 @@ public class MatvecPrep extends Configured implements Tool {
     protected JobConf configStage1() throws Exception {
         final JobConf conf = new JobConf(getConf(), MatvecPrep.class);
         conf.set("block_size", "" + block_size);
-        conf.set("matrix_row", "" + number_nodes);
         conf.set("makesym", "" + makesym);
         conf.setBoolean("isVector", isVector);
 
@@ -268,10 +248,10 @@ public class MatvecPrep extends Configured implements Tool {
         conf.setReducerClass(RedStage1.class);
 
         FileSystem fs = FileSystem.get(getConf());
-        fs.delete(output_path, true);
+        fs.delete(pathOutput, true);
 
-        FileInputFormat.setInputPaths(conf, edge_path);
-        SequenceFileOutputFormat.setOutputPath(conf, output_path);
+        FileInputFormat.setInputPaths(conf, pathEdges);
+        SequenceFileOutputFormat.setOutputPath(conf, pathOutput);
         SequenceFileOutputFormat.setCompressOutput(conf, true);
 
         conf.setOutputFormat(SequenceFileOutputFormat.class);
