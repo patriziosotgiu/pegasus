@@ -53,6 +53,7 @@ public class Runner1Test {
     public void map() throws IOException {
         mapDriver.addInput(blockIndex(0), blockVector(0, 11, 12, 13, 14));
         mapDriver.addInput(blockIndex(1, 0), blockMatrix(1L, 1, 2, 1, 3, 4, 5));
+        mapDriver.getConfiguration().setInt("block_width", 5);
 
         mapDriver.addOutput(new Stage1.JoinKey(true, 0), blockVector(0, 11, 12, 13, 14));
         mapDriver.addOutput(new Stage1.JoinKey(false, 0), blockMatrix(1L, 1, 2, 1, 3, 4, 5));
@@ -93,8 +94,8 @@ public class Runner1Test {
 
         reduceDriver.addInput(new Stage1.JoinKey(true, block_col), Arrays.asList(e1, e2));
 
-        BlockWritable v1 = blockVector(BlockWritable.TYPE.INITIAL, 0, 1, 2);
-        BlockWritable v2 = blockVector(BlockWritable.TYPE.INCOMPLETE, 1, 0, 1);
+        BlockWritable v1 = blockVector(BlockWritable.TYPE.VECTOR_INITIAL, 0, 1, 2);
+        BlockWritable v2 = blockVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, 1, 0, 1);
 
         reduceDriver.addOutput(new LongWritable(block_col), v1); // initial vector
         reduceDriver.addOutput(new LongWritable(block_col), v2); // after multiplication
@@ -113,8 +114,8 @@ public class Runner1Test {
         mrDriver.addInput(blockIndex(0), blockVector(0, 1, 2));
         mrDriver.addInput(blockIndex(0, 0), blockMatrix(1, 0, 1, 1, 0, 1, 2, 2, 1));
 
-        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.INITIAL, 0, 1, 2));
-        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.INCOMPLETE, 1, 0, 1));
+        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.VECTOR_INITIAL, 0, 1, 2));
+        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, 1, 0, 1));
         mrDriver.runTest();
     }
 
@@ -134,8 +135,8 @@ public class Runner1Test {
 
         reduceDriver.addInput(new Stage1.JoinKey(true, block_col), Arrays.asList(e1, e2));
 
-        BlockWritable v1 = blockVector(BlockWritable.TYPE.INITIAL, 1, -1, -1);
-        BlockWritable v2 = blockVector(BlockWritable.TYPE.INCOMPLETE, -1, -1, 1);
+        BlockWritable v1 = blockVector(BlockWritable.TYPE.VECTOR_INITIAL, 1, -1, -1);
+        BlockWritable v2 = blockVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, -1, -1, 1);
 
         reduceDriver.addOutput(new LongWritable(block_col), v1); // initial vector
         reduceDriver.addOutput(new LongWritable(block_col), v2); // after multiplication
@@ -177,12 +178,12 @@ public class Runner1Test {
         mrDriver.addInput(blockIndex(1, 0), blockMatrix(0L, 0, 1));
         mrDriver.addInput(blockIndex(1, 1), blockMatrix(1L, 1, 1));
 
-        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.INITIAL, 0, 1));
-        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.INCOMPLETE, 1, 0));
-        mrDriver.addOutput(new LongWritable(1), blockVector(BlockWritable.TYPE.INCOMPLETE, 1, -1));
-        mrDriver.addOutput(new LongWritable(1), blockVector(BlockWritable.TYPE.INITIAL, 2, 3));
-        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.INCOMPLETE, -1, 2));
-        mrDriver.addOutput(new LongWritable(1), blockVector(BlockWritable.TYPE.INCOMPLETE, -1, 3));
+        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.VECTOR_INITIAL, 0, 1));
+        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, 1, 0));
+        mrDriver.addOutput(new LongWritable(1), blockVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, 1, -1));
+        mrDriver.addOutput(new LongWritable(1), blockVector(BlockWritable.TYPE.VECTOR_INITIAL, 2, 3));
+        mrDriver.addOutput(new LongWritable(0), blockVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, -1, 2));
+        mrDriver.addOutput(new LongWritable(1), blockVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, -1, 3));
 
         mrDriver.runTest();
     }

@@ -56,7 +56,7 @@ public class Stage2 {
                 // System.out.println("Reducer2.reduce input: " + key + "," + block);
 
                 BlockWritable.TYPE t = block.getType();
-                if (t == BlockWritable.TYPE.FINAL || t == BlockWritable.TYPE.INITIAL) {
+                if (t == BlockWritable.TYPE.VECTOR_FINAL || t == BlockWritable.TYPE.VECTOR_INITIAL) {
                     initialVector.set(block);
                     gotInitialVector = true;
                     isInitialVector = true;
@@ -86,7 +86,7 @@ public class Stage2 {
             }
 
             boolean noChange = initialVector.getVectorElemValues().equals(res);
-            BlockWritable.TYPE type = (noChange) ? BlockWritable.TYPE.FINAL : BlockWritable.TYPE.INCOMPLETE;
+            BlockWritable.TYPE type = (noChange) ? BlockWritable.TYPE.VECTOR_FINAL : BlockWritable.TYPE.VECTOR_INCOMPLETE;
             VALUE.setVector(type, res);
             KEY.setVectorIndex(key.get());
             output.collect(KEY, VALUE);

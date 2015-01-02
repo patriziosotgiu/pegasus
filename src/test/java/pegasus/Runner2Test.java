@@ -60,17 +60,17 @@ public class Runner2Test {
         reduceDriver.getConfiguration().setInt("recursive_diagmult", 0);
 
         reduceDriver.addInput(new LongWritable(0), Arrays.asList(
-                blockVector(TYPE.INITIAL, 0, 1),
-                blockVector(TYPE.INCOMPLETE, 0, 0),
-                blockVector(TYPE.INCOMPLETE, 2, 2)));
+                blockVector(TYPE.VECTOR_INITIAL, 0, 1),
+                blockVector(TYPE.VECTOR_INCOMPLETE, 0, 0),
+                blockVector(TYPE.VECTOR_INCOMPLETE, 2, 2)));
 
         reduceDriver.addInput(new LongWritable(1), Arrays.asList(
-                blockVector(TYPE.INITIAL, 2, 3),
-                blockVector(TYPE.INCOMPLETE, 0, 1),
-                blockVector(TYPE.INCOMPLETE, 2, 3)));
+                blockVector(TYPE.VECTOR_INITIAL, 2, 3),
+                blockVector(TYPE.VECTOR_INCOMPLETE, 0, 1),
+                blockVector(TYPE.VECTOR_INCOMPLETE, 2, 3)));
 
-        reduceDriver.addOutput(blockIndex(0), blockVector(TYPE.INCOMPLETE, 0, 0));
-        reduceDriver.addOutput(blockIndex(1), blockVector(TYPE.INCOMPLETE, 0, 1));
+        reduceDriver.addOutput(blockIndex(0), blockVector(TYPE.VECTOR_INCOMPLETE, 0, 0));
+        reduceDriver.addOutput(blockIndex(1), blockVector(TYPE.VECTOR_INCOMPLETE, 0, 1));
 
         reduceDriver.runTest();
     }
@@ -86,11 +86,11 @@ public class Runner2Test {
         reduceDriver.getConfiguration().setInt("recursive_diagmult", 0);
 
         reduceDriver.addInput(new LongWritable(0), Arrays.asList(
-                blockVector(TYPE.INITIAL, 0, 1, 3),
-                blockVector(TYPE.INCOMPLETE, 1, 0, 2),
-                blockVector(TYPE.INCOMPLETE, 3, -1, -1)));
+                blockVector(TYPE.VECTOR_INITIAL, 0, 1, 3),
+                blockVector(TYPE.VECTOR_INCOMPLETE, 1, 0, 2),
+                blockVector(TYPE.VECTOR_INCOMPLETE, 3, -1, -1)));
 
-        reduceDriver.addOutput(blockIndex(0), blockVector(TYPE.INCOMPLETE, 0, 0, 2));
+        reduceDriver.addOutput(blockIndex(0), blockVector(TYPE.VECTOR_INCOMPLETE, 0, 0, 2));
 
         reduceDriver.runTest();
     }
@@ -106,10 +106,10 @@ public class Runner2Test {
         reduceDriver.getConfiguration().setInt("recursive_diagmult", 0);
 
         reduceDriver.addInput(new LongWritable(0), Arrays.asList(
-                blockVector(TYPE.INITIAL, 3, -1, -1),
-                blockVector(TYPE.INCOMPLETE, 2, 1, 2)));
+                blockVector(TYPE.VECTOR_INITIAL, 3, -1, -1),
+                blockVector(TYPE.VECTOR_INCOMPLETE, 2, 1, 2)));
 
-        reduceDriver.addOutput(blockIndex(0), blockVector(TYPE.INCOMPLETE, 2, -1, -1));
+        reduceDriver.addOutput(blockIndex(0), blockVector(TYPE.VECTOR_INCOMPLETE, 2, -1, -1));
 
         reduceDriver.runTest();
     }

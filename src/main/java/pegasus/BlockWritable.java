@@ -18,8 +18,8 @@
 package pegasus;
 
 import com.google.common.base.Objects;
+import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.list.array.TLongArrayList;
-import gnu.trove.list.array.TShortArrayList;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -30,56 +30,71 @@ import java.io.IOException;
 public class BlockWritable implements Writable {
 
     public static enum TYPE {
-        NONE(0), INITIAL(1), FINAL(2), INCOMPLETE(3);
+        MATRIX(0), VECTOR_INITIAL(1), VECTOR_FINAL(2), VECTOR_INCOMPLETE(3);
         private final short value;
         private TYPE(int v) { value = (short)v; }
         private short getValue() { return value; }
         public static TYPE get(int code) {
             switch(code) {
-                case 0: return NONE;
-                case 1: return INITIAL;
-                case 2: return FINAL;
-                case 3: return INCOMPLETE;
+                case 0: return MATRIX;
+                case 1: return VECTOR_INITIAL;
+                case 2: return VECTOR_FINAL;
+                case 3: return VECTOR_INCOMPLETE;
             }
             return null;
         }
     };
 
-    private TYPE type = TYPE.NONE;
+    private TYPE type = TYPE.MATRIX;
 
-    private boolean isVector = true;
+    private TIntArrayList matrixElemIndexes = null;  // (col, rows)
+    private long blockRow = -1;
 
-    // Only for matrix block
-    private final TShortArrayList matrixElemIndexes = new TShortArrayList();  // (col, rows)
-    private long blockRow;
-
-
-    // Only for vector block
-    private final TLongArrayList vectorElemValues = new TLongArrayList();
-
-    public BlockWritable(BlockWritable b) {
-        set(b);
-    }
+    private TLongArrayList vectorElemValues = null;
 
     public BlockWritable() {
+        System.out.println("Create new BlockWritable with default constructor");
+        init(1);
+    }
 
+    public BlockWritable(int blockSize, TYPE type) {
+        this(blockSize);
+        this.type = type;
+        if (!TYPE.MATRIX.equals(type)) {
+            setVectorInitialValue(blockSize);
+        }
+    }
+
+    public BlockWritable(int blockSize) {
+        System.out.println("Create new BlockWritable with BlockWritable(blocksize)");
+        init(blockSize);
+    }
+
+    private void init(int blockSize) {
+        this.matrixElemIndexes = new TIntArrayList(blockSize);
+        this.vectorElemValues = new TLongArrayList(blockSize);
+    }
+
+    public void setVectorInitialValue(int blockSize) {
+        for (int i = 0; i < blockSize; i++) {
+            vectorElemValues.add(-1);
+        }
     }
 
     @Override
     public void write(DataOutput dataOutput) throws IOException {
-        WritableUtils.writeVInt(dataOutput, isVector ? 1 : 0);
-        dataOutput.writeShort(type.getValue());
-        if (isVector) {
+        dataOutput.writeByte(type.getValue());
+        if (!TYPE.MATRIX.equals(type)) {
             WritableUtils.writeVInt(dataOutput, vectorElemValues.size());
             for (int i = 0; i < vectorElemValues.size(); i++) {
-                WritableUtils.writeVLong(dataOutput, vectorElemValues.get(i));
+                WritableUtils.writeVLong(dataOutput, vectorElemValues.getQuick(i));
             }
         }
         else {
             WritableUtils.writeVLong(dataOutput, blockRow);
             WritableUtils.writeVInt(dataOutput, matrixElemIndexes.size());
             for (int i = 0; i < matrixElemIndexes.size(); i++) {
-                dataOutput.writeShort(matrixElemIndexes.get(i));
+                WritableUtils.writeVInt(dataOutput, matrixElemIndexes.get(i));
             }
         }
     }
@@ -87,19 +102,20 @@ public class BlockWritable implements Writable {
     @Override
     public void readFields(DataInput dataInput) throws IOException {
         reset();
-        isVector = WritableUtils.readVInt(dataInput) == 1;
-        type = TYPE.get(dataInput.readShort());
-        if (isVector) {
+        type = TYPE.get(dataInput.readByte());
+        if (!TYPE.MATRIX.equals(type)) {
             int n = WritableUtils.readVInt(dataInput);
+            vectorElemValues.ensureCapacity(n);
             for (int i = 0; i < n; i++) {
                 vectorElemValues.add(WritableUtils.readVLong(dataInput));
             }
         }
         else {
             blockRow = WritableUtils.readVLong(dataInput);
-            int n = WritableUtils.readVInt(dataInput);
+            long n = WritableUtils.readVLong(dataInput);
             for (int i = 0; i < n; i++) {
-                matrixElemIndexes.add(dataInput.readShort());
+                matrixElemIndexes.add(WritableUtils.readVInt(dataInput));
+              //matrixElemIndexes.add(dataInput.readByte());
             }
         }
     }
@@ -107,7 +123,6 @@ public class BlockWritable implements Writable {
     @Override
     public String toString() {
         return Objects.toStringHelper(this)
-                .add("isVector", isVector)
                 .add("type", type)
                 .add("blockRow", blockRow)
                 .add("matrixElemIndexes", matrixElemIndexes)
@@ -115,43 +130,34 @@ public class BlockWritable implements Writable {
                 .toString();
     }
 
-    public void setVectorElem(short i, long l) {
+    public void setVectorElem(int i, long l) {
         vectorElemValues.set(i, l);
     }
 
-    public void setVectorElem(int i, long l) {
-        setVectorElem((short) i, l);
-    }
-
     public void addMatrixElem(int i, int j) {
-        addMatrixElem((short) i, (short) j);
-    }
-
-    public void addMatrixElem(short i, short j) {
         matrixElemIndexes.add(i);
         matrixElemIndexes.add(j);
-    } 
+    }
+
     public void reset() {
-        vectorElemValues.reset();
-        matrixElemIndexes.reset();
-        type = TYPE.NONE;
+        resetMatrix();
+        resetVector();
+        blockRow = -1;
     }
 
-    public void setTypeVector(int n) {
-        isVector = true;
-        vectorElemValues.ensureCapacity(n);
-        vectorElemValues.fill(0, n, -1);
+    public void resetVector() {
+        vectorElemValues.resetQuick();
     }
 
-    public void setTypeMatrix() {
-        isVector = false;
+    public void resetMatrix() {
+        matrixElemIndexes.resetQuick();
     }
 
     public boolean isTypeVector() {
-        return isVector;
+        return !TYPE.MATRIX.equals(type);
     }
 
-    public TShortArrayList getMatrixElemIndexes() {
+    public TIntArrayList getMatrixElemIndexes() {
         return matrixElemIndexes;
     }
 
@@ -174,19 +180,17 @@ public class BlockWritable implements Writable {
 
     public void set(BlockWritable b) {
         type = b.type;
-        isVector = b.isVector;
         blockRow = b.blockRow;
-        matrixElemIndexes.clear();      // resetQuick better ?
-        vectorElemValues.clear();       // resetQuick better ?
+        matrixElemIndexes.resetQuick();
         matrixElemIndexes.addAll(b.matrixElemIndexes);
+        vectorElemValues.resetQuick();
         vectorElemValues.addAll(b.vectorElemValues);
     }
 
     public void setVector(TYPE type, TLongArrayList values) {
         this.type = type;
-        this.isVector = true;
-        this.vectorElemValues.clear();
-        this.vectorElemValues.addAll(values);
+        vectorElemValues.resetQuick();
+        vectorElemValues.addAll(values);
     }
 
     public TYPE getType() {
@@ -201,7 +205,6 @@ public class BlockWritable implements Writable {
         BlockWritable that = (BlockWritable) o;
 
         if (blockRow != that.blockRow) return false;
-        if (isVector != that.isVector) return false;
         if (type != that.type) return false;
         if (!matrixElemIndexes.equals(that.matrixElemIndexes)) return false;
         if (!vectorElemValues.equals(that.vectorElemValues)) return false;
@@ -212,7 +215,6 @@ public class BlockWritable implements Writable {
     @Override
     public int hashCode() {
         int result = type.hashCode();
-        result = 31 * result + (isVector ? 1 : 0);
         result = 31 * result + matrixElemIndexes.hashCode();
         result = 31 * result + vectorElemValues.hashCode();
         result = 31 * result + (int) (blockRow ^ (blockRow >>> 32));

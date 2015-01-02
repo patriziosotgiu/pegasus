@@ -42,7 +42,7 @@ public class Stage1 {
         private boolean isVector;
         private long index;
 
-        public JoinKey(boolean isVector, int index) {
+        public JoinKey(boolean isVector, long index) {
             this.isVector = isVector;
             this.index = index;
         }
@@ -64,7 +64,7 @@ public class Stage1 {
         @Override
         public void write(DataOutput dataOutput) throws IOException {
             dataOutput.writeBoolean(isVector);
-            WritableUtils.writeVLong(dataOutput,index);
+            WritableUtils.writeVLong(dataOutput, index);
         }
 
         @Override
@@ -141,16 +141,22 @@ public class Stage1 {
     public static class Mapper1 extends MapReduceBase implements Mapper<BlockIndexWritable, BlockWritable, JoinKey, BlockWritable> {
 
         private static JoinKey KEY   = new JoinKey();
-        private static BlockWritable VALUE = new BlockWritable();
+        private static BlockWritable VALUE;
+
+        public void configure(JobConf job) {
+            int block_width = Integer.parseInt(job.get("block_width"));
+            VALUE = new BlockWritable(block_width);
+        }
 
         public void map(final BlockIndexWritable key, final BlockWritable value, final OutputCollector<JoinKey, BlockWritable> output, final Reporter reporter) throws IOException {
-            VALUE.set(value);
             if (value.isTypeVector()) {
+                VALUE.set(value);
                 KEY.set(true, key.getI());
                 reporter.incrCounter("PEGASUS", "Number of vector blocks", 1);
             }
             else {
                 KEY.set(false, key.getJ());
+                VALUE.set(value);
                 VALUE.setBlockRow(key.getI());
                 reporter.incrCounter("PEGASUS", "Number of matrix blocks", 1);
             }
@@ -184,7 +190,7 @@ public class Stage1 {
                 return;
             }
 
-            VALUE.set(BlockWritable.TYPE.INITIAL, initialVector);
+            VALUE.set(BlockWritable.TYPE.VECTOR_INITIAL, initialVector);
             KEY.set(key.index);
             output.collect(KEY, VALUE);
             //System.out.println("Reducer1.reduce: " + KEY + "," + VALUE);
@@ -193,7 +199,7 @@ public class Stage1 {
                 BlockWritable e = values.next();
                 //System.out.println("Reducer1.reduce input value: " + key + "," + e + ", initial vector: " + initialVector);
                 KEY.set(e.getBlockRow());
-                VALUE.setVector(BlockWritable.TYPE.INCOMPLETE, GIMV.minBlockVector(e, initialVector));
+                VALUE.setVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, GIMV.minBlockVector(e, initialVector));
                 output.collect(KEY, VALUE);
                 //System.out.println("Reducer1.reduce: " + KEY + "," + VALUE);
             }

@@ -37,8 +37,7 @@ public class Utils {
     }
 
     public static BlockWritable blockVector(long ... data) {
-        BlockWritable res = new BlockWritable();
-        res.setTypeVector(data.length);
+        BlockWritable res = new BlockWritable(data.length, BlockWritable.TYPE.VECTOR_INITIAL);
         for (int i = 0; i < data.length; i++) {
             res.setVectorElem(i, data[i]);
         }
@@ -46,8 +45,7 @@ public class Utils {
     }
 
     public static BlockWritable blockMatrix(long blockRow, int...data) {
-        BlockWritable res = new BlockWritable();
-        res.setTypeMatrix();
+        BlockWritable res = new BlockWritable(data.length / 2, BlockWritable.TYPE.MATRIX);
         res.setBlockRow(blockRow);
         for (int i = 0; i < data.length / 2; i++) {
             res.addMatrixElem(data[2 * i], data[2 * i + 1]);

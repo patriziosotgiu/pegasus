@@ -27,8 +27,7 @@ public class BlockWritableTest {
 
     @Test
     public void serializeVector() throws IOException {
-        BlockWritable b1 = new BlockWritable();
-        b1.setTypeVector(6);
+        BlockWritable b1 = new BlockWritable(6, BlockWritable.TYPE.VECTOR_INITIAL);
         b1.setVectorElem(1, 10L);
         b1.setVectorElem(3, 30L);
         b1.setVectorElem(5, 50L);
@@ -39,7 +38,7 @@ public class BlockWritableTest {
 
         ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
         DataInputStream r = new DataInputStream(bais);
-        BlockWritable b2 = new BlockWritable();
+        BlockWritable b2 = new BlockWritable(6);
         b2.readFields(r);
 
         assertEquals(b1, b2);
@@ -47,12 +46,11 @@ public class BlockWritableTest {
 
     @Test
     public void serializeMatrix() throws IOException {
-        BlockWritable b1 = new BlockWritable();
+        BlockWritable b1 = new BlockWritable(3, BlockWritable.TYPE.MATRIX);
         b1.addMatrixElem(1, 10);
         b1.addMatrixElem(3, 30);
         b1.addMatrixElem(5, 50);
         b1.setBlockRow(10);
-        b1.setTypeMatrix();
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream w = new DataOutputStream(baos);
@@ -60,7 +58,7 @@ public class BlockWritableTest {
 
         ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
         DataInputStream r = new DataInputStream(bais);
-        BlockWritable b2 = new BlockWritable();
+        BlockWritable b2 = new BlockWritable(3);
         b2.readFields(r);
 
         assertEquals(b1, b2);

@@ -18,21 +18,21 @@
 
 package pegasus;
 
+import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.list.array.TLongArrayList;
-import gnu.trove.list.array.TShortArrayList;
 
 public class GIMV {
     private final static long NO_VALUE = -1L;
 
-    public static TLongArrayList minBlockVector(TShortArrayList matrixIndexes,
+    public static TLongArrayList minBlockVector(TIntArrayList matrixIndexes,
                                                 TLongArrayList vectorValues)
     {
         TLongArrayList output = new TLongArrayList(vectorValues.size());
         output.fill(0, vectorValues.size(), NO_VALUE);
         int max = matrixIndexes.size() / 2;
         for (int i = 0; i < max; i++) {
-            short matrixElementRow = matrixIndexes.getQuick(2 * i);
-            short matrixElementColumn = matrixIndexes.getQuick(2 * i + 1);
+            int matrixElementRow = matrixIndexes.getQuick(2 * i);
+            int matrixElementColumn = matrixIndexes.getQuick(2 * i + 1);
             long val = vectorValues.getQuick(matrixElementColumn);
             long currentVal = output.getQuick(matrixElementRow);
             if (val != NO_VALUE && (val < currentVal || currentVal == NO_VALUE)) {

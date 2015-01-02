@@ -34,7 +34,7 @@ public class BlockIndexWritable implements WritableComparable<BlockIndexWritable
 
     @Override
     public void write(DataOutput dataOutput) throws IOException {
-        WritableUtils.writeVInt(dataOutput, isVector ? 1 : 0);
+        dataOutput.writeBoolean(isVector);    // 1 byte
         WritableUtils.writeVLong(dataOutput, i);
         if (!isVector) {
             WritableUtils.writeVLong(dataOutput, j);
@@ -43,7 +43,7 @@ public class BlockIndexWritable implements WritableComparable<BlockIndexWritable
 
     @Override
     public void readFields(DataInput dataInput) throws IOException {
-        isVector = WritableUtils.readVInt(dataInput) == 1;
+        isVector = dataInput.readBoolean();
         i = WritableUtils.readVLong(dataInput);
         if (!isVector) {
             j = WritableUtils.readVLong(dataInput);

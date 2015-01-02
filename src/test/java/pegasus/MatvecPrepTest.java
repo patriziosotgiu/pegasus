@@ -28,9 +28,9 @@ import org.junit.Test;
 import java.io.IOException;
 
 public class MatvecPrepTest {
-    MapDriver<LongWritable, Text, BlockIndexWritable, BlockWritable> mapDriver;
-    ReduceDriver<BlockIndexWritable, BlockWritable, BlockIndexWritable, BlockWritable> reduceDriver;
-    MapReduceDriver<LongWritable, Text, BlockIndexWritable, BlockWritable, BlockIndexWritable, BlockWritable> mrDriver;
+    MapDriver<LongWritable, Text, BlockIndexWritable, MatvecPrep.LightBlockWritable> mapDriver;
+    ReduceDriver<BlockIndexWritable, MatvecPrep.LightBlockWritable, BlockIndexWritable, BlockWritable> reduceDriver;
+    MapReduceDriver<LongWritable, Text, BlockIndexWritable, MatvecPrep.LightBlockWritable, BlockIndexWritable, BlockWritable> mrDriver;
 
 
     @Before
@@ -53,8 +53,8 @@ public class MatvecPrepTest {
     @Test
     public void simpleMatrix() throws IOException {
         mrDriver.getConfiguration().set("block_size", "3");
-        mrDriver.getConfiguration().set("matrix_row", "6");
         mrDriver.getConfiguration().set("makesym", "1");
+        mrDriver.getConfiguration().setBoolean("isVector", false);
 
         mrDriver.addInput(new LongWritable(0), new Text("1\t2"));
         mrDriver.addInput(new LongWritable(0), new Text("1\t3"));
@@ -65,15 +65,11 @@ public class MatvecPrepTest {
         BlockIndexWritable b3 = new BlockIndexWritable();
         BlockIndexWritable b4 = new BlockIndexWritable();
 
-        BlockWritable d1 = new BlockWritable();
-        BlockWritable d2 = new BlockWritable();
-        BlockWritable d3 = new BlockWritable();
-        BlockWritable d4 = new BlockWritable();
+        BlockWritable d1 = new BlockWritable(3, BlockWritable.TYPE.MATRIX);
+        BlockWritable d2 = new BlockWritable(3, BlockWritable.TYPE.MATRIX);
+        BlockWritable d3 = new BlockWritable(3, BlockWritable.TYPE.MATRIX);
+        BlockWritable d4 = new BlockWritable(3, BlockWritable.TYPE.MATRIX);
 
-        d1.setTypeMatrix();
-        d3.setTypeMatrix();
-        d2.setTypeMatrix();
-        d4.setTypeMatrix();
 
         b1.setMatrixIndex(0, 0);
         d1.addMatrixElem(1, 2);
@@ -94,15 +90,14 @@ public class MatvecPrepTest {
         mrDriver.addOutput(b3, d3);
         mrDriver.addOutput(b4, d4);
 
-
         mrDriver.runTest();
     }
 
     @Test
     public void simpleVector() throws IOException {
         mrDriver.getConfiguration().set("block_size", "3");
-        mrDriver.getConfiguration().set("matrix_row", "7");
         mrDriver.getConfiguration().set("makesym", "7");
+        mrDriver.getConfiguration().setBoolean("isVector", true);
 
         mrDriver.addInput(new LongWritable(0), new Text("1\tv1"));
         mrDriver.addInput(new LongWritable(0), new Text("2\tv2"));
@@ -115,13 +110,9 @@ public class MatvecPrepTest {
         BlockIndexWritable b2 = new BlockIndexWritable();
         BlockIndexWritable b3 = new BlockIndexWritable();
 
-        BlockWritable d1 = new BlockWritable();
-        BlockWritable d2 = new BlockWritable();
-        BlockWritable d3 = new BlockWritable();
-
-        d1.setTypeVector(3);
-        d2.setTypeVector(3);
-        d3.setTypeVector(3);
+        BlockWritable d1 = new BlockWritable(3, BlockWritable.TYPE.VECTOR_INITIAL);
+        BlockWritable d2 = new BlockWritable(3, BlockWritable.TYPE.VECTOR_INITIAL);
+        BlockWritable d3 = new BlockWritable(3, BlockWritable.TYPE.VECTOR_INITIAL);
 
         b1.setVectorIndex(0);
         d1.setVectorElem(0, -1);
