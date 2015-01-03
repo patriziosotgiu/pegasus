@@ -90,14 +90,24 @@ public class Stage1 {
 
         @Override
         public void write(DataOutput dataOutput) throws IOException {
-            dataOutput.writeBoolean(isVector);
-            WritableUtils.writeVLong(dataOutput, index);
+            if (isVector) {
+                WritableUtils.writeVLong(dataOutput, - (index + 1));
+            } else {
+                WritableUtils.writeVLong(dataOutput, index + 1);
+
+            }
         }
 
         @Override
         public void readFields(DataInput dataInput) throws IOException {
-            isVector = dataInput.readBoolean();
-            index = WritableUtils.readVLong(dataInput);
+            long v = WritableUtils.readVLong(dataInput);
+            if (v < 0) {
+                isVector = true;
+                index = -v - 1;
+            } else {
+                isVector = false;
+                index = v - 1;
+            }
         }
 
         public void set(boolean isVector, long index) {
