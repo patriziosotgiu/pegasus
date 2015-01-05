@@ -24,37 +24,45 @@ import java.util.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.*;
 
 public class ConCmptIVGen extends Configured implements Tool {
 
-    public static class MapStage1 extends MapReduceBase implements Mapper<LongWritable, Text, VLongWritable, Text> {
-        public void map(final LongWritable key, final Text value, final OutputCollector<VLongWritable, Text> output, final Reporter reporter) throws IOException {
+    public static class MapStage1 extends Mapper<LongWritable, Text, VLongWritable, Text> {
+        @Override
+        public void map(LongWritable key, Text value, Context ctx) throws IOException, InterruptedException {
             String line_text = value.toString();
             String[] line = line_text.split("\t");
             if (line.length < 3)
                 return;
-            output.collect(new VLongWritable(Long.parseLong(line[0])), new Text(line[1] + "\t" + line[2]));
+            ctx.write(new VLongWritable(Long.parseLong(line[0])), new Text(line[1] + "\t" + line[2]));
         }
     }
 
-    public static class RedStage1 extends MapReduceBase implements Reducer<VLongWritable, Text, VLongWritable, Text> {
+    public static class RedStage1 extends Reducer<VLongWritable, Text, VLongWritable, Text> {
         long number_nodes = 0;
         private final VLongWritable KEY = new VLongWritable();
         private final Text VALUE = new Text();
 
-        public void configure(JobConf job) {
-            number_nodes = Long.parseLong(job.get("number_nodes"));
+        @Override
+        public void setup(Context ctx) {
+            Configuration conf = ctx.getConfiguration();
+            number_nodes = Long.parseLong(conf.get("number_nodes"));
             System.out.println("Reducer1: number_nodes = " + number_nodes);
         }
 
-        public void reduce(final VLongWritable key, final Iterator<Text> values, OutputCollector<VLongWritable, Text> output, final Reporter reporter) throws IOException {
+        @Override
+        public void reduce(VLongWritable key, Iterable<Text> values, Context ctx) throws IOException, InterruptedException {
             long start_node;
             long end_node;
 
-            while (values.hasNext()) {
-                String[] line = values.next().toString().split("\t");
+            for (Text value : values) {
+                String[] line = value.toString().split("\t");
 
                 start_node = Long.parseLong(line[0]);
                 end_node = Long.parseLong(line[1]);
@@ -62,7 +70,7 @@ public class ConCmptIVGen extends Configured implements Tool {
                 for (long i = start_node; i <= end_node; i++) {
                     KEY.set(i);
                     VALUE.set(Long.toString(i));
-                    output.collect(KEY, VALUE);
+                    ctx.write(KEY, VALUE);
                 }
             }
         }
@@ -93,12 +101,12 @@ public class ConCmptIVGen extends Configured implements Tool {
 
         gen_cmd_file(number_nodes, number_reducers, pathBitmask);
 
-        JobClient.runJob(configStage1());
+        int res = configStage1().waitForCompletion(true) ? 0 : 1;
         FileSystem.get(getConf()).delete(pathBitmask);
 
         System.out.println("\n[PEGASUS] Initial connected component vector generated in HDFS " + args[0] + "\n");
 
-        return 0;
+        return res;
     }
 
     // generate bitmask command file which is used in the 1st iteration.
@@ -129,25 +137,27 @@ public class ConCmptIVGen extends Configured implements Tool {
         fs.copyFromLocalFile(true, new Path(tmpFile.getAbsolutePath()), output_path);
     }
 
-    protected JobConf configStage1() throws Exception {
-        final JobConf conf = new JobConf(getConf(), ConCmptIVGen.class);
+    protected Job configStage1() throws Exception {
+        Configuration conf = getConf();
         conf.set("number_nodes", "" + number_nodes);
-        conf.setJobName("ConCmptIVGen_Stage1");
 
-        conf.setMapperClass(MapStage1.class);
-        conf.setReducerClass(RedStage1.class);
+        Job job = new Job(conf, "ConCmptIVGen");
+        job.setJarByClass(ConCmptIVGen.class);
 
-        FileInputFormat.setInputPaths(conf, pathBitmask);
-        FileOutputFormat.setOutputPath(conf, pathVector);
-        FileOutputFormat.setCompressOutput(conf, true);
+        job.setMapperClass(MapStage1.class);
+        job.setReducerClass(RedStage1.class);
+
+        FileInputFormat.setInputPaths(job, pathBitmask);
+        FileOutputFormat.setOutputPath(job, pathVector);
+        FileOutputFormat.setCompressOutput(job, true);
 //        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
-        conf.setNumReduceTasks(number_reducers);
+        job.setNumReduceTasks(number_reducers);
 
-        conf.setOutputKeyClass(VLongWritable.class);
-        conf.setOutputValueClass(Text.class);
+        job.setOutputKeyClass(VLongWritable.class);
+        job.setOutputValueClass(Text.class);
 
-        return conf;
+        return job;
     }
 }
 

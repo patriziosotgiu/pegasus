@@ -21,11 +21,12 @@ package pegasus;
 import com.google.common.base.Objects;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.list.array.TLongArrayList;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapreduce.*;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -162,10 +163,8 @@ public class Stage1 {
         }
     }
 
-    public static class IndexPartitioner implements Partitioner<JoinKey, BlockWritable> {
-
-        public void configure(JobConf job) {}
-
+    public static class IndexPartitioner extends Partitioner<JoinKey, BlockWritable> {
+        @Override
         public int getPartition(JoinKey key, BlockWritable value, int numReduceTasks) {
             long index = key.getIndex();
             int hashCode = 31 * (int) (index ^ (index >>> 32));
@@ -202,34 +201,37 @@ public class Stage1 {
 
     // TODO: use 2 distinct mappers and multiple input to avoid the if-else condition
     // output negative key to identify
-    public static class Mapper1 extends MapReduceBase implements Mapper<BlockIndexWritable, BlockWritable, JoinKey, BlockWritable> {
+    public static class Mapper1 extends Mapper<BlockIndexWritable, BlockWritable, JoinKey, BlockWritable> {
 
         private static JoinKey KEY   = new JoinKey();
         private static BlockWritable VALUE;
 
-        public void configure(JobConf job) {
-            int block_width = Integer.parseInt(job.get("block_width"));
+        @Override
+        public void setup(Context ctx) {
+            Configuration conf = ctx.getConfiguration();
+            int block_width = Integer.parseInt(conf.get("block_width"));
             VALUE = new BlockWritable(block_width);
         }
 
-        public void map(final BlockIndexWritable key, final BlockWritable value, final OutputCollector<JoinKey, BlockWritable> output, final Reporter reporter) throws IOException {
+        @Override
+        public void map(BlockIndexWritable key, BlockWritable value, Context ctx) throws IOException, InterruptedException {
             if (value.isTypeVector()) {
                 VALUE.set(value);
                 KEY.set(true, key.getI());
-                reporter.incrCounter("PEGASUS", "Number of vector blocks", 1);
+                ctx.getCounter(PegasusCounter.NUMBER_BLOCK_VECTOR).increment(1);
             }
             else {
                 KEY.set(false, key.getJ());
                 VALUE.set(value);
                 VALUE.setBlockRow(key.getI());
-                reporter.incrCounter("PEGASUS", "Number of matrix blocks", 1);
+                ctx.getCounter(PegasusCounter.NUMBER_BLOCK_MATRIX).increment(1);
             }
-            output.collect(KEY, VALUE);
+            ctx.write(KEY, VALUE);
             //System.out.println("Mapper1.map: " + KEY + ", " + VALUE);
         }
     }
 
-    public static class Reducer1 extends MapReduceBase implements Reducer<JoinKey, BlockWritable, VLongWritable, BlockWritable> {
+    public static class Reducer1 extends Reducer<JoinKey, BlockWritable, VLongWritable, BlockWritable> {
         protected int blockWidth;
 
         private BlockWritable initialVector = new BlockWritable();
@@ -237,34 +239,38 @@ public class Stage1 {
         private VLongWritable  KEY   = new VLongWritable();
         private BlockWritable VALUE = new BlockWritable();
 
-        public void configure(JobConf job) {
-            blockWidth = Integer.parseInt(job.get("block_width"));
+        @Override
+        public void setup(Context ctx) {
+            Configuration conf = ctx.getConfiguration();
+            blockWidth = Integer.parseInt(conf.get("block_width"));
             System.out.println("Reducer1: block_width=" + blockWidth);
         }
 
-        public void reduce(final JoinKey key, final Iterator<BlockWritable> values, OutputCollector<VLongWritable, BlockWritable> output, final Reporter reporter) throws IOException {
+        @Override
+        public void reduce(JoinKey key, Iterable<BlockWritable> values, Context ctx) throws IOException, InterruptedException {
 
-            initialVector.set(values.next());
+            Iterator<BlockWritable> it = values.iterator();
+            initialVector.set(it.next());
             //System.out.println("Reducer1.reduce input value: " + key + "," + initialVector);
 
             if (!initialVector.isTypeVector()) {
                 // missing vector... should never happen, right ? throw exception ?
-                reporter.incrCounter("ERROR", "no_vector", 1);
+                ctx.getCounter(PegasusCounter.ERROR_NO_INITIAL_VECTOR).increment(1);
                 System.err.println("error: no vector, key=" + key + ", first_value=" + initialVector);
                 return;
             }
 
             VALUE.set(BlockWritable.TYPE.VECTOR_INITIAL, initialVector);
             KEY.set(key.index);
-            output.collect(KEY, VALUE);
+            ctx.write(KEY, VALUE);
             //System.out.println("Reducer1.reduce: " + KEY + "," + VALUE);
 
-            while (values.hasNext()) {
-                BlockWritable e = values.next();
+            while (it.hasNext()) {
+                BlockWritable e = it.next();
                 //System.out.println("Reducer1.reduce input value: " + key + "," + e + ", initial vector: " + initialVector);
                 KEY.set(e.getBlockRow());
                 VALUE.setVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, GIMV.minBlockVector(e, initialVector));
-                output.collect(KEY, VALUE);
+                ctx.write(KEY, VALUE);
                 //System.out.println("Reducer1.reduce: " + KEY + "," + VALUE);
             }
         }

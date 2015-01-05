@@ -19,18 +19,18 @@
 package pegasus;
 
 import gnu.trove.list.array.TLongArrayList;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.VLongWritable;
-import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapreduce.Reducer;
 
 import java.io.IOException;
-import java.util.Iterator;
 
 //
 // Stage2: group blocks by row and compute the +
 //
 public class Stage2 {
 
-    public static class Reducer2 extends MapReduceBase implements Reducer<VLongWritable, BlockWritable, BlockIndexWritable, BlockWritable> {
+    public static class Reducer2 extends Reducer<VLongWritable, BlockWritable, BlockIndexWritable, BlockWritable> {
         protected int blockWidth;
 
         private final BlockIndexWritable KEY   = new BlockIndexWritable();
@@ -39,20 +39,22 @@ public class Stage2 {
         private TLongArrayList res = null;
         private BlockWritable initialVector = new BlockWritable();
 
-        public void configure(JobConf job) {
-            blockWidth = Integer.parseInt(job.get("block_width"));
+        @Override
+        public void setup(Reducer.Context ctx) {
+            Configuration conf = ctx.getConfiguration();
+            blockWidth = Integer.parseInt(conf.get("block_width"));
             res = new TLongArrayList(blockWidth);
             System.out.println("Reducer2: block_width=" + blockWidth);
         }
 
-        public void reduce(final VLongWritable key, final Iterator<BlockWritable> values, final OutputCollector<BlockIndexWritable, BlockWritable> output, final Reporter reporter) throws IOException {
+        @Override
+        public void reduce(VLongWritable key, Iterable<BlockWritable> values, Context ctx) throws IOException, InterruptedException {
             boolean gotInitialVector = false;
             res.fill(0, blockWidth, -2);
 
             int n = 0;
             boolean isInitialVector = true;
-            while (values.hasNext()) {
-                BlockWritable block = values.next();
+            for (BlockWritable block : values) {
                 // System.out.println("Reducer2.reduce input: " + key + "," + block);
 
                 BlockWritable.TYPE t = block.getType();
@@ -80,7 +82,7 @@ public class Stage2 {
             }
 
             if (!gotInitialVector) {
-                reporter.incrCounter("ERROR", "self_vector == null", 1);
+                ctx.getCounter(PegasusCounter.ERROR_MISSING_SELF_VECTOR).increment(1);
                 System.err.println("ERROR: self_vector == null, key=" + key + ", # values" + n);
                 return;
             }
@@ -89,9 +91,10 @@ public class Stage2 {
             BlockWritable.TYPE type = (noChange) ? BlockWritable.TYPE.VECTOR_FINAL : BlockWritable.TYPE.VECTOR_INCOMPLETE;
             VALUE.setVector(type, res);
             KEY.setVectorIndex(key.get());
-            output.collect(KEY, VALUE);
+            ctx.write(KEY, VALUE);
             //System.out.println("Reducer2.reduce: " + KEY + "," + VALUE);
-            reporter.incrCounter("change", noChange ? "final" : "incomplete", 1);
+            ctx.getCounter(noChange ? PegasusCounter.NUMBER_FINAL_VECTOR : PegasusCounter.NUMBER_INCOMPLETE_VECTOR)
+                    .increment(1);
         }
     }
 }

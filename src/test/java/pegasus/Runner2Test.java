@@ -18,7 +18,7 @@
 package pegasus;
 
 import org.apache.hadoop.io.VLongWritable;
-import org.apache.hadoop.mrunit.ReduceDriver;
+import org.apache.hadoop.mrunit.mapreduce.ReduceDriver;
 import org.junit.Before;
 import org.junit.Test;
 

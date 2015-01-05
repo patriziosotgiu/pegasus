@@ -25,8 +25,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.SnappyCodec;
-import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.mapred.lib.IdentityMapper;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -66,11 +70,16 @@ public class Runner extends Configured implements Tool {
 
         int n = 0;
         for (; n < MAX_ITERATIONS; n++) {
-            JobClient.runJob(configStage1());
-            RunningJob j = JobClient.runJob(configStage2());
+            Job job1 = configStage1();
+            Job job2 = configStage2();
 
-            long changed = j.getCounters().findCounter("change", "incomplete").getValue();
-            long unchanged = j.getCounters().findCounter("change", "final").getValue();
+            boolean res1 = job1.waitForCompletion(true);
+            boolean res2 = job2.waitForCompletion(true);
+
+            // fixme: check return code
+
+            long changed = job2.getCounters().findCounter(PegasusCounter.NUMBER_INCOMPLETE_VECTOR).getValue();
+            long unchanged = job2.getCounters().findCounter(PegasusCounter.NUMBER_FINAL_VECTOR).getValue();
 
             System.out.println("Hop " + n + " : changed = " + changed + ", unchanged = " + unchanged);
 
@@ -80,7 +89,7 @@ public class Runner extends Configured implements Tool {
                 fs.delete(pathVector, true);
                 fs.rename(pathOutputStage2, pathVector);
                 System.out.println("Unfolding the block structure for easy lookup...");
-                JobClient.runJob(configStage3());
+                configStage3().waitForCompletion(true);  // fixme: check return code
                 break;
             }
             fs.delete(pathOutputStage1, true);
@@ -93,87 +102,94 @@ public class Runner extends Configured implements Tool {
         return 0;
     }
 
-    protected JobConf configStage1() throws Exception {
-        final JobConf conf = new JobConf(getConf(), Runner.class);
+    protected Job configStage1() throws Exception {
+        Configuration conf = getConf();
         conf.set("block_width", "" + blockWidth);
-        conf.setJobName("ConCmptBlock_pass1");
 
-        conf.setMapperClass(Stage1.Mapper1.class);
-        conf.setReducerClass(Stage1.Reducer1.class);
+        Job job = new Job(conf, "ConCmptBlock_pass1");
+        job.setJarByClass(Runner.class);
 
-        FileInputFormat.setInputPaths(conf, pathEdges, pathVector);
-        SequenceFileOutputFormat.setOutputPath(conf, pathOutputStage1);
-        SequenceFileOutputFormat.setCompressOutput(conf, true);
+        job.setMapperClass(Stage1.Mapper1.class);
+        job.setReducerClass(Stage1.Reducer1.class);
 
-        conf.setInputFormat(SequenceFileInputFormat.class);
-        conf.setOutputFormat(SequenceFileOutputFormat.class);
+        FileInputFormat.setInputPaths(job, pathEdges, pathVector);
+        SequenceFileOutputFormat.setOutputPath(job, pathOutputStage1);
+        SequenceFileOutputFormat.setCompressOutput(job, true);
+
+        job.setInputFormatClass(SequenceFileInputFormat.class);
+        job.setOutputFormatClass(SequenceFileOutputFormat.class);
         conf.set("mapred.output.compression.type", "BLOCK");
 
-        conf.setNumReduceTasks(numberOfReducers);
+        job.setNumReduceTasks(numberOfReducers);
 
-        conf.setMapOutputKeyClass(Stage1.JoinKey.class);
-        conf.setMapOutputValueClass(BlockWritable.class);
-        conf.setOutputKeyClass(VLongWritable.class);
-        conf.setOutputValueClass(BlockWritable.class);
-        conf.setOutputValueGroupingComparator(Stage1.IndexComparator.class);
-        conf.setPartitionerClass(Stage1.IndexPartitioner.class);
-        conf.setOutputKeyComparatorClass(Stage1.SortComparator.class);
+        job.setMapOutputKeyClass(Stage1.JoinKey.class);
+        job.setMapOutputValueClass(BlockWritable.class);
+        job.setOutputKeyClass(VLongWritable.class);
+        job.setOutputValueClass(BlockWritable.class);
+        job.setGroupingComparatorClass(Stage1.IndexComparator.class);
+        job.setPartitionerClass(Stage1.IndexPartitioner.class);
+        job.setSortComparatorClass(Stage1.SortComparator.class);
 
-        setCompression(conf);
+        setCompression(job);
 
-        return conf;
+        return job;
     }
 
-    protected JobConf configStage2() throws Exception {
-        final JobConf conf = new JobConf(getConf(), Runner.class);
+    protected Job configStage2() throws Exception {
+        Configuration conf = getConf();
+
+        Job job = new Job(conf, "ConCmptBlock_pass2");
+        job.setJarByClass(Runner.class);
         conf.set("block_width", "" + blockWidth);
-        conf.setJobName("ConCmptBlock_pass2");
 
-        conf.setMapperClass(IdentityMapper.class);
-        conf.setReducerClass(Stage2.Reducer2.class);
+        job.setMapperClass(Mapper.class);
+        job.setReducerClass(Stage2.Reducer2.class);
 
-        SequenceFileInputFormat.setInputPaths(conf, pathOutputStage1);
-        FileOutputFormat.setOutputPath(conf, pathOutputStage2);
-        FileOutputFormat.setCompressOutput(conf, true);
+        SequenceFileInputFormat.setInputPaths(job, pathOutputStage1);
+        FileOutputFormat.setOutputPath(job, pathOutputStage2);
+        FileOutputFormat.setCompressOutput(job, true);
 
-        conf.setNumReduceTasks(numberOfReducers);
+        job.setNumReduceTasks(numberOfReducers);
 
-        conf.setInputFormat(SequenceFileInputFormat.class);
-        conf.setOutputFormat(SequenceFileOutputFormat.class);
+        job.setInputFormatClass(SequenceFileInputFormat.class);
+        job.setOutputFormatClass(SequenceFileOutputFormat.class);
 
-        conf.setMapOutputKeyClass(VLongWritable.class);
-        conf.setMapOutputValueClass(BlockWritable.class);
-        conf.setOutputKeyClass(BlockIndexWritable.class);
-        conf.setOutputValueClass(BlockWritable.class);
+        job.setMapOutputKeyClass(VLongWritable.class);
+        job.setMapOutputValueClass(BlockWritable.class);
+        job.setOutputKeyClass(BlockIndexWritable.class);
+        job.setOutputValueClass(BlockWritable.class);
 
-        setCompression(conf);
-        return conf;
+        setCompression(job);
+        return job;
     }
 
-    protected JobConf configStage3() throws Exception {
-        final JobConf conf = new JobConf(getConf(), Runner.class);
+    protected Job configStage3() throws Exception {
+        Configuration conf = getConf();
+
+        Job job = new Job(conf, "ConCmptBlock_pass4");
+        job.setJarByClass(Runner.class);
+
         conf.set("block_width", "" + blockWidth);
-        conf.setJobName("ConCmptBlock_pass4");
 
-        conf.setMapperClass(Stage3.Mapper3.class);
+        job.setMapperClass(Stage3.Mapper3.class);
 
-        FileInputFormat.setInputPaths(conf, pathVector);
-        FileOutputFormat.setOutputPath(conf, pathOutputVector);
-        FileOutputFormat.setCompressOutput(conf, true);
+        FileInputFormat.setInputPaths(job, pathVector);
+        FileOutputFormat.setOutputPath(job, pathOutputVector);
+        FileOutputFormat.setCompressOutput(job, true);
 
-        conf.setInputFormat(SequenceFileInputFormat.class);
+        job.setInputFormatClass(SequenceFileInputFormat.class);
 
-        conf.setNumReduceTasks(0);
+        job.setNumReduceTasks(0);
 
-        conf.setOutputKeyClass(VLongWritable.class);
-        conf.setOutputValueClass(Text.class);
+        job.setOutputKeyClass(VLongWritable.class);
+        job.setOutputValueClass(Text.class);
 
-        setCompression(conf);
-        return conf;
+        setCompression(job);
+        return job;
     }
 
-    public static void setCompression(JobConf conf) {
-     //   FileOutputFormat.setOutputCompressorClass(conf, GzipCodec.class);
-         FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
+    public static void setCompression(Job job) {
+     //   FileOutputFormat.setOutputCompressorClass(job, GzipCodec.class);
+         FileOutputFormat.setOutputCompressorClass(job, SnappyCodec.class);
     }
 }

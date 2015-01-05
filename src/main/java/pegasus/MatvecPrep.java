@@ -19,13 +19,16 @@
 package pegasus;
 
 import java.io.*;
-import java.util.*;
 
 import com.google.common.base.Objects;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.*;
 
 public class MatvecPrep extends Configured implements Tool {
@@ -113,7 +116,7 @@ public class MatvecPrep extends Configured implements Tool {
     }
 
 
-    public static class MapStage1 extends MapReduceBase implements Mapper<LongWritable, Text, BlockIndexWritable, LightBlockWritable> {
+    public static class MapStage1 extends Mapper<LongWritable, Text, BlockIndexWritable, LightBlockWritable> {
         private int block_size;
         private int makesym;
         private boolean isVector;
@@ -121,14 +124,17 @@ public class MatvecPrep extends Configured implements Tool {
         private final BlockIndexWritable KEY = new BlockIndexWritable();
         private final LightBlockWritable VALUE = new LightBlockWritable();
 
-        public void configure(JobConf job) {
-            block_size = Integer.parseInt(job.get("block_size"));
-            makesym = Integer.parseInt(job.get("makesym"));
-            isVector = job.getBoolean("isVector", false);
+        @Override
+        public void setup(Context ctx) {
+            Configuration conf = ctx.getConfiguration();
+            block_size = Integer.parseInt(conf.get("block_size"));
+            makesym = Integer.parseInt(conf.get("makesym"));
+            isVector = conf.getBoolean("isVector", false);
             System.out.println("MapStage1: block_size = " + block_size + ", makesym = " + makesym);
         }
 
-        public void map(final LongWritable key, final Text value, final OutputCollector<BlockIndexWritable, LightBlockWritable> output, final Reporter reporter) throws IOException {
+        @Override
+        public void map(LongWritable key, Text value, Context ctx) throws IOException, InterruptedException {
             String[] line = value.toString().split("\t");
 
             if (isVector) {
@@ -138,13 +144,13 @@ public class MatvecPrep extends Configured implements Tool {
 
                 VALUE.setVector((int)in_block_index, Long.parseLong(line[1]));
                 KEY.setVectorIndex(block_id);
-                output.collect(KEY, VALUE);
+                ctx.write(KEY, VALUE);
             } else {
                 long row_id = Long.parseLong(line[0]);
                 long col_id = Long.parseLong(line[1]);
 
                 if (col_id == row_id) {
-                    reporter.incrCounter("PEGASUS", "Number of self edges removed", 1);
+                    ctx.getCounter(PegasusCounter.NUMBER_SELF_LOOP).increment(1);
                     return;
                 }
                 long block_rowid = row_id / block_size;
@@ -155,49 +161,50 @@ public class MatvecPrep extends Configured implements Tool {
                 VALUE.setMatrix(in_block_row, in_block_col);
                 KEY.setMatrixIndex(block_rowid, block_colid);
 
-                output.collect(KEY, VALUE);
+                ctx.write(KEY, VALUE);
                 if (makesym == 1)
                 {
                     VALUE.setMatrix(in_block_col, in_block_row);
                     KEY.setMatrixIndex(block_colid, block_rowid);
-                    output.collect(KEY, VALUE);
+                    ctx.write(KEY, VALUE);
                 }
             }
         }
     }
 
-    public static class RedStage1 extends MapReduceBase implements Reducer<BlockIndexWritable, LightBlockWritable, BlockIndexWritable, BlockWritable> {
+    public static class RedStage1 extends Reducer<BlockIndexWritable, LightBlockWritable, BlockIndexWritable, BlockWritable> {
         private BlockWritable VALUE = null;
         private int blockSize;
         private boolean isVector;
 
-        public void configure(JobConf job) {
-            blockSize = Integer.parseInt(job.get("block_size"));
-            isVector = job.getBoolean("isVector", false);
+        @Override
+        public void setup(Context ctx) {
+            Configuration conf = ctx.getConfiguration();
+            blockSize = Integer.parseInt(conf.get("block_size"));
+            isVector = conf.getBoolean("isVector", false);
             VALUE = new BlockWritable(blockSize, isVector ? BlockWritable.TYPE.VECTOR_INITIAL : BlockWritable.TYPE.MATRIX);
         }
 
-        public void reduce(final BlockIndexWritable key, final Iterator<LightBlockWritable> values, final OutputCollector<BlockIndexWritable, BlockWritable> output, final Reporter reporter) throws IOException {
+        @Override
+        public void reduce(BlockIndexWritable key, Iterable<LightBlockWritable> values, Context ctx) throws IOException, InterruptedException {
             if (isVector) {
                 VALUE.resetVector();
                 boolean initVector = false;
-                while (values.hasNext()) {
-                    LightBlockWritable block = values.next();
+                for (LightBlockWritable block : values) {
                     if (!initVector) {
                         VALUE.setVectorInitialValue(blockSize);
                         initVector = true;
                     }
                     VALUE.setVectorElem(block.index1, block.value);
                 }
-                output.collect(key, VALUE);
+                ctx.write(key, VALUE);
             }
             else {
                 VALUE.resetMatrix();
-                while (values.hasNext()) {
-                    LightBlockWritable block = values.next();
+                for (LightBlockWritable block : values) {
                     VALUE.addMatrixElem(block.index1, block.index2);
                 }
-                output.collect(key, VALUE);
+                ctx.write(key, VALUE);
             }
         }
     }
@@ -227,45 +234,46 @@ public class MatvecPrep extends Configured implements Tool {
         System.out.println("\n-----===[PEGASUS: A Peta-Scale Graph Mining System]===-----\n");
         System.out.println("[PEGASUS] Converting the adjacency matrix to block format. Output_prefix = " + output_prefix + ", makesym = " + makesym + ", block width=" + block_size + "\n");
 
-        JobClient.runJob(configStage1());
+        int res = configStage1().waitForCompletion(true) ? 0 : 1;
 
         System.out.println("\n[PEGASUS] Conversion finished.");
         System.out.println("[PEGASUS] Block adjacency matrix is saved in the HDFS " + args[1] + "\n");
-        return 0;
+        return res;
     }
 
-    protected JobConf configStage1() throws Exception {
-        final JobConf conf = new JobConf(getConf(), MatvecPrep.class);
+    protected Job configStage1() throws Exception {
+        Configuration conf = getConf();
         conf.set("block_size", "" + block_size);
         conf.set("makesym", "" + makesym);
         conf.setBoolean("isVector", isVector);
+        conf.set("mapred.output.compression.type", "BLOCK"); // usefull ?
 
-        conf.setJobName("MatvecPrep_Stage1");
+        Job job = new Job(conf, "MatvecPrep_Stage1");
+        job.setJarByClass(MatvecPrep.class);
 
-        conf.setMapperClass(MapStage1.class);
-        conf.setReducerClass(RedStage1.class);
+        job.setMapperClass(MapStage1.class);
+        job.setReducerClass(RedStage1.class);
 
         FileSystem fs = FileSystem.get(getConf());
         fs.delete(pathOutput, true);
 
-        FileInputFormat.setInputPaths(conf, pathEdges);
-        SequenceFileOutputFormat.setOutputPath(conf, pathOutput);
-        SequenceFileOutputFormat.setCompressOutput(conf, true);
+        FileInputFormat.setInputPaths(job, pathEdges);
+        SequenceFileOutputFormat.setOutputPath(job, pathOutput);
+        SequenceFileOutputFormat.setCompressOutput(job, true);
 
-        conf.setOutputFormat(SequenceFileOutputFormat.class);
-        conf.set("mapred.output.compression.type", "BLOCK");
+        job.setOutputFormatClass(SequenceFileOutputFormat.class);
 
-        conf.setNumReduceTasks(nreducer);
+        job.setNumReduceTasks(nreducer);
 
-        conf.setMapOutputKeyClass(BlockIndexWritable.class);
-        conf.setMapOutputValueClass(LightBlockWritable.class);
+        job.setMapOutputKeyClass(BlockIndexWritable.class);
+        job.setMapOutputValueClass(LightBlockWritable.class);
 
-        conf.setOutputKeyClass(BlockIndexWritable.class);
-        conf.setOutputValueClass(BlockWritable.class);
+        job.setOutputKeyClass(BlockIndexWritable.class);
+        job.setOutputValueClass(BlockWritable.class);
 
-        Runner.setCompression(conf);
+        Runner.setCompression(job);
 
-        return conf;
+        return job;
     }
 }
 

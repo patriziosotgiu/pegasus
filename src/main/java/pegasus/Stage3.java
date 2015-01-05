@@ -18,28 +18,31 @@
 
 package pegasus;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapreduce.Mapper;
 
 import java.io.IOException;
 
 public class Stage3 {
 
-    public static class Mapper3 extends MapReduceBase implements Mapper<BlockIndexWritable, BlockWritable, VLongWritable, Text> {
+    public static class Mapper3 extends Mapper<BlockIndexWritable, BlockWritable, VLongWritable, Text> {
         int blockWidth;
 
-        public void configure(JobConf job) {
-            blockWidth = Integer.parseInt(job.get("block_width"));
+        @Override
+        public void setup(Mapper.Context ctx) {
+            Configuration conf = ctx.getConfiguration();
+            blockWidth = Integer.parseInt(conf.get("block_width"));
             System.out.println("Mapper3: block_width = " + blockWidth);
         }
 
-        public void map(final BlockIndexWritable key, final BlockWritable value, final OutputCollector<VLongWritable, Text> output, final Reporter reporter) throws IOException {
+        public void map(BlockIndexWritable key, BlockWritable value, Context ctx) throws IOException, InterruptedException {
             long block_id = key.getI();
             for (int i = 0; i < value.getVectorElemValues().size(); i++) {
                 long component_id = value.getVectorElemValues().get(i);
                 if (component_id >= 0) {
-                    output.collect(new VLongWritable(blockWidth * block_id + i), new Text("msf" + component_id));
+                    ctx.write(new VLongWritable(blockWidth * block_id + i), new Text("msf" + component_id));
                 }
             }
         }
