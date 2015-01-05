@@ -116,6 +116,7 @@ public class Runner extends Configured implements Tool {
         conf.setOutputValueClass(BlockWritable.class);
         conf.setOutputValueGroupingComparator(Stage1.IndexComparator.class);
         conf.setPartitionerClass(Stage1.IndexPartitioner.class);
+        conf.setOutputKeyComparatorClass(Stage1.SortComparator.class);
 
         setCompression(conf);
 

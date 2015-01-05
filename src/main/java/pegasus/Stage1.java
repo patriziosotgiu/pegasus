@@ -173,6 +173,33 @@ public class Stage1 {
         }
     }
 
+    public static class SortComparator extends WritableComparator {
+        protected SortComparator() {
+            super(JoinKey.class);
+        }
+
+        @Override
+        public int compare(byte[] b1, int s1, int l1,
+                           byte[] b2, int s2, int l2) {
+            long v1;
+            long v2;
+            try {
+                v1 = readVLong(b1, s1);
+                v2 = readVLong(b2, s2);
+            } catch (IOException e) {
+                throw new RuntimeException("corrupted data, failed to parse JoinKey");
+            }
+            int cmp = Long.compare(Math.abs(v1), Math.abs(v2));
+            if (cmp != 0) {
+                return cmp;
+            }
+            boolean isVector1 = v1 < 0;
+            boolean isVector2 = v2 < 0;
+            cmp = - Boolean.compare(isVector1, isVector2);
+            return cmp;
+        }
+    }
+
     // TODO: use 2 distinct mappers and multiple input to avoid the if-else condition
     // output negative key to identify
     public static class Mapper1 extends MapReduceBase implements Mapper<BlockIndexWritable, BlockWritable, JoinKey, BlockWritable> {
