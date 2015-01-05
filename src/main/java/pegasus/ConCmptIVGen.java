@@ -19,7 +19,6 @@
 package pegasus;
 
 import java.io.*;
-import java.util.*;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
@@ -83,7 +82,6 @@ public class ConCmptIVGen extends Configured implements Tool {
     protected Path pathVector = null;
     protected long number_nodes = 0;
     protected int number_reducers = 1;
-    FileSystem fs;
 
     public static void main(final String[] args) throws Exception {
         final int result = ToolRunner.run(new Configuration(), new ConCmptIVGen(), args);
@@ -150,7 +148,6 @@ public class ConCmptIVGen extends Configured implements Tool {
         FileInputFormat.setInputPaths(job, pathBitmask);
         FileOutputFormat.setOutputPath(job, pathVector);
         FileOutputFormat.setCompressOutput(job, true);
-//        FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
 
         job.setNumReduceTasks(number_reducers);
 
