@@ -43,13 +43,11 @@ public class MatvecPrep extends Configured implements Tool {
         @Override
         public void write(DataOutput out) throws IOException {
             if (value != -1) {
-                out.writeBoolean(true);
-                WritableUtils.writeVInt(out, index1);
+                WritableUtils.writeVInt(out, - (index1 + 1));
                 WritableUtils.writeVLong(out, value);
             }
             else {
-                out.writeBoolean(false);
-                WritableUtils.writeVInt(out, index1);
+                WritableUtils.writeVInt(out, index1 + 1);
                 WritableUtils.writeVInt(out, index2);
                 WritableUtils.writeVLong(out, value);
             }
@@ -57,14 +55,14 @@ public class MatvecPrep extends Configured implements Tool {
 
         @Override
         public void readFields(DataInput in) throws IOException {
-            boolean isVector = in.readBoolean();
-            if (isVector) {
-                this.index1 = WritableUtils.readVInt(in);
+            int v = WritableUtils.readVInt(in);
+            if (v < 0) { // vector
+                this.index1 = -v - 1;
                 this.index2 = -1;
                 this.value = WritableUtils.readVLong(in);
             }
-            else {
-                this.index1 = WritableUtils.readVInt(in);
+            else { // matrix
+                this.index1 = v - 1;
                 this.index2 = WritableUtils.readVInt(in);
                 this.value = -1;
             }

@@ -18,6 +18,7 @@
 package pegasus;
 
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mrunit.MapDriver;
 import org.apache.hadoop.mrunit.ReduceDriver;

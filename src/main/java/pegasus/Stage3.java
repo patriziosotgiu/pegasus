@@ -18,7 +18,7 @@
 
 package pegasus;
 
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.*;
 
@@ -26,7 +26,7 @@ import java.io.IOException;
 
 public class Stage3 {
 
-    public static class Mapper3 extends MapReduceBase implements Mapper<BlockIndexWritable, BlockWritable, LongWritable, Text> {
+    public static class Mapper3 extends MapReduceBase implements Mapper<BlockIndexWritable, BlockWritable, VLongWritable, Text> {
         int blockWidth;
 
         public void configure(JobConf job) {
@@ -34,12 +34,12 @@ public class Stage3 {
             System.out.println("Mapper3: block_width = " + blockWidth);
         }
 
-        public void map(final BlockIndexWritable key, final BlockWritable value, final OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
+        public void map(final BlockIndexWritable key, final BlockWritable value, final OutputCollector<VLongWritable, Text> output, final Reporter reporter) throws IOException {
             long block_id = key.getI();
             for (int i = 0; i < value.getVectorElemValues().size(); i++) {
                 long component_id = value.getVectorElemValues().get(i);
                 if (component_id >= 0) {
-                    output.collect(new LongWritable(blockWidth * block_id + i), new Text("msf" + component_id));
+                    output.collect(new VLongWritable(blockWidth * block_id + i), new Text("msf" + component_id));
                 }
             }
         }

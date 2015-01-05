@@ -29,19 +29,19 @@ import org.apache.hadoop.util.*;
 
 public class ConCmptIVGen extends Configured implements Tool {
 
-    public static class MapStage1 extends MapReduceBase implements Mapper<LongWritable, Text, LongWritable, Text> {
-        public void map(final LongWritable key, final Text value, final OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
+    public static class MapStage1 extends MapReduceBase implements Mapper<LongWritable, Text, VLongWritable, Text> {
+        public void map(final LongWritable key, final Text value, final OutputCollector<VLongWritable, Text> output, final Reporter reporter) throws IOException {
             String line_text = value.toString();
             String[] line = line_text.split("\t");
             if (line.length < 3)
                 return;
-            output.collect(new LongWritable(Long.parseLong(line[0])), new Text(line[1] + "\t" + line[2]));
+            output.collect(new VLongWritable(Long.parseLong(line[0])), new Text(line[1] + "\t" + line[2]));
         }
     }
 
-    public static class RedStage1 extends MapReduceBase implements Reducer<LongWritable, Text, LongWritable, Text> {
+    public static class RedStage1 extends MapReduceBase implements Reducer<VLongWritable, Text, VLongWritable, Text> {
         long number_nodes = 0;
-        private final LongWritable KEY = new LongWritable();
+        private final VLongWritable KEY = new VLongWritable();
         private final Text VALUE = new Text();
 
         public void configure(JobConf job) {
@@ -49,7 +49,7 @@ public class ConCmptIVGen extends Configured implements Tool {
             System.out.println("Reducer1: number_nodes = " + number_nodes);
         }
 
-        public void reduce(final LongWritable key, final Iterator<Text> values, OutputCollector<LongWritable, Text> output, final Reporter reporter) throws IOException {
+        public void reduce(final VLongWritable key, final Iterator<Text> values, OutputCollector<VLongWritable, Text> output, final Reporter reporter) throws IOException {
             long start_node;
             long end_node;
 
@@ -144,7 +144,7 @@ public class ConCmptIVGen extends Configured implements Tool {
 
         conf.setNumReduceTasks(number_reducers);
 
-        conf.setOutputKeyClass(LongWritable.class);
+        conf.setOutputKeyClass(VLongWritable.class);
         conf.setOutputValueClass(Text.class);
 
         return conf;

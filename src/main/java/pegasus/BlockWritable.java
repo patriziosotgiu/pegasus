@@ -29,6 +29,8 @@ import java.io.IOException;
 
 public class BlockWritable implements Writable {
 
+    private static final int END_OF_LIST = -1;
+
     public static enum TYPE {
         MATRIX(0), VECTOR_INITIAL(1), VECTOR_FINAL(2), VECTOR_INCOMPLETE(3);
         private final short value;
@@ -83,16 +85,21 @@ public class BlockWritable implements Writable {
 
     @Override
     public void write(DataOutput dataOutput) throws IOException {
-        dataOutput.writeByte(type.getValue());
         if (!TYPE.MATRIX.equals(type)) {
-            WritableUtils.writeVInt(dataOutput, vectorElemValues.size());
+            int v = (vectorElemValues.size() << 2) | (type.getValue() & 0x03);
+            WritableUtils.writeVInt(dataOutput, v);
             for (int i = 0; i < vectorElemValues.size(); i++) {
-                WritableUtils.writeVLong(dataOutput, vectorElemValues.getQuick(i));
+                if (vectorElemValues.getQuick(i) != -1) {
+                    WritableUtils.writeVInt(dataOutput, i);
+                    WritableUtils.writeVLong(dataOutput, vectorElemValues.getQuick(i));
+                }
             }
+            WritableUtils.writeVInt(dataOutput, END_OF_LIST);
         }
         else {
+            int v = (matrixElemIndexes.size() << 2) | (type.getValue() & 0x03);
+            WritableUtils.writeVInt(dataOutput, v);
             WritableUtils.writeVLong(dataOutput, blockRow);
-            WritableUtils.writeVInt(dataOutput, matrixElemIndexes.size());
             for (int i = 0; i < matrixElemIndexes.size(); i++) {
                 WritableUtils.writeVInt(dataOutput, matrixElemIndexes.get(i));
             }
@@ -102,17 +109,24 @@ public class BlockWritable implements Writable {
     @Override
     public void readFields(DataInput dataInput) throws IOException {
         reset();
-        type = TYPE.get(dataInput.readByte());
+        int v = WritableUtils.readVInt(dataInput);
+        type = TYPE.get(v & 0x03);
         if (!TYPE.MATRIX.equals(type)) {
-            int n = WritableUtils.readVInt(dataInput);
+            int n = v >> 2;
             vectorElemValues.ensureCapacity(n);
-            for (int i = 0; i < n; i++) {
-                vectorElemValues.add(WritableUtils.readVLong(dataInput));
+            vectorElemValues.fill(0, n, -1);
+            while (true) {
+                int idx =  WritableUtils.readVInt(dataInput);
+                if (idx == END_OF_LIST) {
+                    break;
+                }
+                long value = WritableUtils.readVLong(dataInput);
+                vectorElemValues.setQuick(idx, value);
             }
         }
         else {
+            long n = v >> 2;
             blockRow = WritableUtils.readVLong(dataInput);
-            long n = WritableUtils.readVLong(dataInput);
             for (int i = 0; i < n; i++) {
                 matrixElemIndexes.add(WritableUtils.readVInt(dataInput));
               //matrixElemIndexes.add(dataInput.readByte());

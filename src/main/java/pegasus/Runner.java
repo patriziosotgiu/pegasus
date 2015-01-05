@@ -22,8 +22,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.util.Tool;
@@ -112,7 +113,7 @@ public class Runner extends Configured implements Tool {
 
         conf.setMapOutputKeyClass(Stage1.JoinKey.class);
         conf.setMapOutputValueClass(BlockWritable.class);
-        conf.setOutputKeyClass(LongWritable.class);
+        conf.setOutputKeyClass(VLongWritable.class);
         conf.setOutputValueClass(BlockWritable.class);
         conf.setOutputValueGroupingComparator(Stage1.IndexComparator.class);
         conf.setPartitionerClass(Stage1.IndexPartitioner.class);
@@ -140,7 +141,7 @@ public class Runner extends Configured implements Tool {
         conf.setInputFormat(SequenceFileInputFormat.class);
         conf.setOutputFormat(SequenceFileOutputFormat.class);
 
-        conf.setMapOutputKeyClass(LongWritable.class);
+        conf.setMapOutputKeyClass(VLongWritable.class);
         conf.setMapOutputValueClass(BlockWritable.class);
         conf.setOutputKeyClass(BlockIndexWritable.class);
         conf.setOutputValueClass(BlockWritable.class);
@@ -164,7 +165,7 @@ public class Runner extends Configured implements Tool {
 
         conf.setNumReduceTasks(0);
 
-        conf.setOutputKeyClass(LongWritable.class);
+        conf.setOutputKeyClass(VLongWritable.class);
         conf.setOutputValueClass(Text.class);
 
         setCompression(conf);
@@ -173,6 +174,6 @@ public class Runner extends Configured implements Tool {
 
     public static void setCompression(JobConf conf) {
      //   FileOutputFormat.setOutputCompressorClass(conf, GzipCodec.class);
-     //    FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
+         FileOutputFormat.setOutputCompressorClass(conf, SnappyCodec.class);
     }
 }

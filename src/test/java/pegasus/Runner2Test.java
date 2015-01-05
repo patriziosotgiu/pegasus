@@ -17,7 +17,7 @@
 
 package pegasus;
 
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.mrunit.ReduceDriver;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,7 +30,7 @@ import pegasus.BlockWritable.TYPE;
 
 
 public class Runner2Test {
-    ReduceDriver<LongWritable, BlockWritable, BlockIndexWritable, BlockWritable> reduceDriver;
+    ReduceDriver<VLongWritable, BlockWritable, BlockIndexWritable, BlockWritable> reduceDriver;
 
     @Before
     public void setUp() {
@@ -59,12 +59,12 @@ public class Runner2Test {
         reduceDriver.getConfiguration().setInt("block_width", 2);
         reduceDriver.getConfiguration().setInt("recursive_diagmult", 0);
 
-        reduceDriver.addInput(new LongWritable(0), Arrays.asList(
+        reduceDriver.addInput(new VLongWritable(0), Arrays.asList(
                 blockVector(TYPE.VECTOR_INITIAL, 0, 1),
                 blockVector(TYPE.VECTOR_INCOMPLETE, 0, 0),
                 blockVector(TYPE.VECTOR_INCOMPLETE, 2, 2)));
 
-        reduceDriver.addInput(new LongWritable(1), Arrays.asList(
+        reduceDriver.addInput(new VLongWritable(1), Arrays.asList(
                 blockVector(TYPE.VECTOR_INITIAL, 2, 3),
                 blockVector(TYPE.VECTOR_INCOMPLETE, 0, 1),
                 blockVector(TYPE.VECTOR_INCOMPLETE, 2, 3)));
@@ -85,7 +85,7 @@ public class Runner2Test {
         reduceDriver.getConfiguration().setInt("block_width", 3);
         reduceDriver.getConfiguration().setInt("recursive_diagmult", 0);
 
-        reduceDriver.addInput(new LongWritable(0), Arrays.asList(
+        reduceDriver.addInput(new VLongWritable(0), Arrays.asList(
                 blockVector(TYPE.VECTOR_INITIAL, 0, 1, 3),
                 blockVector(TYPE.VECTOR_INCOMPLETE, 1, 0, 2),
                 blockVector(TYPE.VECTOR_INCOMPLETE, 3, -1, -1)));
@@ -105,7 +105,7 @@ public class Runner2Test {
         reduceDriver.getConfiguration().setInt("block_width", 3);
         reduceDriver.getConfiguration().setInt("recursive_diagmult", 0);
 
-        reduceDriver.addInput(new LongWritable(0), Arrays.asList(
+        reduceDriver.addInput(new VLongWritable(0), Arrays.asList(
                 blockVector(TYPE.VECTOR_INITIAL, 3, -1, -1),
                 blockVector(TYPE.VECTOR_INCOMPLETE, 2, 1, 2)));
 

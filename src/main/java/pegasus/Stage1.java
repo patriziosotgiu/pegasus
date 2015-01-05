@@ -21,7 +21,7 @@ package pegasus;
 import com.google.common.base.Objects;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.list.array.TLongArrayList;
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
@@ -229,12 +229,12 @@ public class Stage1 {
         }
     }
 
-    public static class Reducer1 extends MapReduceBase implements Reducer<JoinKey, BlockWritable, LongWritable, BlockWritable> {
+    public static class Reducer1 extends MapReduceBase implements Reducer<JoinKey, BlockWritable, VLongWritable, BlockWritable> {
         protected int blockWidth;
 
         private BlockWritable initialVector = new BlockWritable();
 
-        private LongWritable  KEY   = new LongWritable();
+        private VLongWritable  KEY   = new VLongWritable();
         private BlockWritable VALUE = new BlockWritable();
 
         public void configure(JobConf job) {
@@ -242,7 +242,7 @@ public class Stage1 {
             System.out.println("Reducer1: block_width=" + blockWidth);
         }
 
-        public void reduce(final JoinKey key, final Iterator<BlockWritable> values, OutputCollector<LongWritable, BlockWritable> output, final Reporter reporter) throws IOException {
+        public void reduce(final JoinKey key, final Iterator<BlockWritable> values, OutputCollector<VLongWritable, BlockWritable> output, final Reporter reporter) throws IOException {
 
             initialVector.set(values.next());
             //System.out.println("Reducer1.reduce input value: " + key + "," + initialVector);

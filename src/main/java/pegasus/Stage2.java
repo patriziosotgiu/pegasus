@@ -19,7 +19,7 @@
 package pegasus;
 
 import gnu.trove.list.array.TLongArrayList;
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.mapred.*;
 
 import java.io.IOException;
@@ -30,7 +30,7 @@ import java.util.Iterator;
 //
 public class Stage2 {
 
-    public static class Reducer2 extends MapReduceBase implements Reducer<LongWritable, BlockWritable, BlockIndexWritable, BlockWritable> {
+    public static class Reducer2 extends MapReduceBase implements Reducer<VLongWritable, BlockWritable, BlockIndexWritable, BlockWritable> {
         protected int blockWidth;
 
         private final BlockIndexWritable KEY   = new BlockIndexWritable();
@@ -45,7 +45,7 @@ public class Stage2 {
             System.out.println("Reducer2: block_width=" + blockWidth);
         }
 
-        public void reduce(final LongWritable key, final Iterator<BlockWritable> values, final OutputCollector<BlockIndexWritable, BlockWritable> output, final Reporter reporter) throws IOException {
+        public void reduce(final VLongWritable key, final Iterator<BlockWritable> values, final OutputCollector<BlockIndexWritable, BlockWritable> output, final Reporter reporter) throws IOException {
             boolean gotInitialVector = false;
             res.fill(0, blockWidth, -2);
 
