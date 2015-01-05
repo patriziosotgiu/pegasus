@@ -158,6 +158,7 @@ public class Runner extends Configured implements Tool {
         job.setMapOutputValueClass(BlockWritable.class);
         job.setOutputKeyClass(BlockIndexWritable.class);
         job.setOutputValueClass(BlockWritable.class);
+        job.setSortComparatorClass(VLongWritableComparator.class);
 
         setCompression(job);
         return job;
