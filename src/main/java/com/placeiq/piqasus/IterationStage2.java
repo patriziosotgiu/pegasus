@@ -1,22 +1,22 @@
-/***********************************************************************
- PEGASUS: Peta-Scale Graph Mining System
- Copyright (C) 2010 U Kang, Duen Horng Chau, and Christos Faloutsos
- Copyright (C) 2014 Jerome Serrano <jerome@placeiq.com>
+/**
+ * PIQASUS: Connected-component analysis for Big Graph
+ *
+ * Copyright (c) 2014 PlaceIQ, Inc
+ *
+ * This software is licensed under Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
- This software is licensed under Apache License, Version 2.0 (the  "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
- http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
- ***********************************************************************/
-
-package pegasus;
+package com.placeiq.piqasus;
 
 import gnu.trove.list.array.TLongArrayList;
 import org.apache.hadoop.conf.Configuration;
@@ -77,7 +77,7 @@ public class IterationStage2 {
             }
 
             if (!gotInitialVector) {
-                ctx.getCounter(PegasusCounter.ERROR_MISSING_SELF_VECTOR).increment(1);
+                ctx.getCounter(PiqasusCounter.ERROR_MISSING_SELF_VECTOR).increment(1);
                 System.err.println("ERROR: self_vector == null, key=" + key + ", # values" + n);
                 return;
             }
@@ -88,7 +88,7 @@ public class IterationStage2 {
             KEY.setVectorIndex(key.get());
             ctx.write(KEY, VALUE);
             //System.out.println("_Reducer.reduce: " + KEY + "," + VALUE);
-            ctx.getCounter(noChange ? PegasusCounter.NUMBER_FINAL_VECTOR : PegasusCounter.NUMBER_INCOMPLETE_VECTOR)
+            ctx.getCounter(noChange ? PiqasusCounter.NUMBER_FINAL_VECTOR : PiqasusCounter.NUMBER_INCOMPLETE_VECTOR)
                     .increment(1);
         }
     }

@@ -1,22 +1,22 @@
-/***********************************************************************
- PEGASUS: Peta-Scale Graph Mining System
- Copyright (C) 2010 U Kang, Duen Horng Chau, and Christos Faloutsos
- Copyright (C) 2014 Jerome Serrano <jerome@placeiq.com>
+/**
+ * PIQASUS: Connected-component analysis for Big Graph
+ *
+ * Copyright (c) 2014 PlaceIQ, Inc
+ *
+ * This software is licensed under Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
- This software is licensed under Apache License, Version 2.0 (the  "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
- http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
- ***********************************************************************/
-
-package pegasus;
+package com.placeiq.piqasus;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -104,7 +104,7 @@ public class InitialVectorGenerator extends Configured implements Tool {
 
     // generate bitmask command file which is used in the 1st iteration.
     private void genCmdFile(long numberOfNodes, int numberOfReducers, Path outputPath) throws IOException {
-        File tmpFile = File.createTempFile("pegasus_initial_vector", "");
+        File tmpFile = File.createTempFile("piqasus_initial_vector", "");
         tmpFile.deleteOnExit();
         try (BufferedWriter out = new BufferedWriter(new FileWriter(tmpFile))) {
             long step = numberOfNodes / numberOfReducers;
@@ -129,7 +129,7 @@ public class InitialVectorGenerator extends Configured implements Tool {
         Configuration conf = getConf();
         conf.setLong("numberOfNodes", numberOfNodes);
 
-        Job job = new Job(conf, "data-piqid.pegasus.ConCmptIVGen_Stage1");
+        Job job = new Job(conf, "data-piqid.piqasus.ConCmptIVGen_Stage1");
         job.setJarByClass(InitialVectorGenerator.class);
         job.setMapperClass(_Mapper.class);
         job.setReducerClass(_Reducer.class);
@@ -144,4 +144,3 @@ public class InitialVectorGenerator extends Configured implements Tool {
         return job;
     }
 }
-

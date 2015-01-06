@@ -1,4 +1,4 @@
-package pegasus;
+package com.placeiq.piqasus;
 
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.list.array.TShortArrayList;

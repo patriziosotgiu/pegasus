@@ -1,22 +1,22 @@
-/***********************************************************************
- PEGASUS: Peta-Scale Graph Mining System
- Copyright (C) 2010 U Kang, Duen Horng Chau, and Christos Faloutsos
- Copyright (C) 2014 Jerome Serrano <jerome@placeiq.com>
+/**
+ * PIQASUS: Connected-component analysis for Big Graph
+ *
+ * Copyright (c) 2014 PlaceIQ, Inc
+ *
+ * This software is licensed under Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
- This software is licensed under Apache License, Version 2.0 (the  "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
- http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
- ***********************************************************************/
-
-package pegasus;
+package com.placeiq.piqasus;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -89,8 +89,8 @@ public class Runner extends Configured implements Tool {
                 return -1;
             }
 
-            long changed = job2.getCounters().findCounter(PegasusCounter.NUMBER_INCOMPLETE_VECTOR).getValue();
-            long unchanged = job2.getCounters().findCounter(PegasusCounter.NUMBER_FINAL_VECTOR).getValue();
+            long changed = job2.getCounters().findCounter(PiqasusCounter.NUMBER_INCOMPLETE_VECTOR).getValue();
+            long unchanged = job2.getCounters().findCounter(PiqasusCounter.NUMBER_FINAL_VECTOR).getValue();
             System.out.println("Iteration #" + n + ", changed=" + changed + ", unchanged=" + unchanged);
 
             fs.delete(pathOutputStage1, true);
@@ -114,7 +114,7 @@ public class Runner extends Configured implements Tool {
         conf.setInt("blockWidth", blockWidth);
         conf.set("mapred.output.compression.type", "BLOCK");
 
-        Job job = new Job(conf, "data-piqid.pegasus.ConCmptBlock_pass1");
+        Job job = new Job(conf, "data-piqid.piqasus.IterationStage1");
         job.setJarByClass(Runner.class);
 
         job.setMapperClass(IterationStage1._Mapper.class);
@@ -143,7 +143,7 @@ public class Runner extends Configured implements Tool {
         Configuration conf = getConf();
         conf.setInt("blockWidth", blockWidth);
 
-        Job job = new Job(conf, "data-piqid.pegasus.ConCmptBlock_pass2");
+        Job job = new Job(conf, "data-piqid.piqasus.IterationStage2");
         job.setJarByClass(Runner.class);
 
         job.setMapperClass(Mapper.class);
@@ -169,7 +169,7 @@ public class Runner extends Configured implements Tool {
         Configuration conf = getConf();
         conf.setInt("blockWidth", blockWidth);
 
-        Job job = new Job(conf, "data-piqid.pegasus.ConCmptBlock_pass4");
+        Job job = new Job(conf, "data-piqid.piqasus.FinalResultBuilder");
         job.setJarByClass(Runner.class);
 
         job.setMapperClass(FinalResultBuilder._Mapper.class);

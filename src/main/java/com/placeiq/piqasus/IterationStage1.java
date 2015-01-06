@@ -1,22 +1,22 @@
-/***********************************************************************
- PEGASUS: Peta-Scale Graph Mining System
- Copyright (C) 2010 U Kang, Duen Horng Chau, and Christos Faloutsos
- Copyright (C) 2014 Jerome Serrano <jerome@placeiq.com>
+/**
+ * PIQASUS: Connected-component analysis for Big Graph
+ *
+ * Copyright (c) 2014 PlaceIQ, Inc
+ *
+ * This software is licensed under Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
- This software is licensed under Apache License, Version 2.0 (the  "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
- http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
- ***********************************************************************/
-
-package pegasus;
+package com.placeiq.piqasus;
 
 import com.google.common.base.Objects;
 import gnu.trove.list.array.TIntArrayList;
@@ -218,13 +218,13 @@ public class IterationStage1 {
             if (value.isTypeVector()) {
                 VALUE.set(value);
                 KEY.set(true, key.getI());
-                ctx.getCounter(PegasusCounter.NUMBER_BLOCK_VECTOR).increment(1);
+                ctx.getCounter(PiqasusCounter.NUMBER_BLOCK_VECTOR).increment(1);
             }
             else {
                 KEY.set(false, key.getJ());
                 VALUE.set(value);
                 VALUE.setBlockRow(key.getI());
-                ctx.getCounter(PegasusCounter.NUMBER_BLOCK_MATRIX).increment(1);
+                ctx.getCounter(PiqasusCounter.NUMBER_BLOCK_MATRIX).increment(1);
             }
             ctx.write(KEY, VALUE);
             //System.out.println("_Mapper.map: " + KEY + ", " + VALUE);
@@ -246,7 +246,7 @@ public class IterationStage1 {
 
             if (!INITIAL_VECTOR.isTypeVector()) {
                 // missing vector... should never happen, right ? throw exception ?
-                ctx.getCounter(PegasusCounter.ERROR_NO_INITIAL_VECTOR).increment(1);
+                ctx.getCounter(PiqasusCounter.ERROR_NO_INITIAL_VECTOR).increment(1);
                 System.err.println("error: no vector, key=" + key + ", first_value=" + INITIAL_VECTOR);
                 return;
             }

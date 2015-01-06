@@ -1,0 +1,38 @@
+PIQASUS: Connected-component analysis for Big Graph
+Copyright (c) 2014 PlaceIQ, Inc
+
+This software is licensed under Apache License, Version 2.0 (see LICENSE file).
+
+Authors
+--------
+
+Jerome Serrano <jerome.serrano@placeiq.com>
+Jeffrey Picard <jeffrey.picard@placeiq.com>
+
+Original work
+-------------
+
+PIQASUS is strongly derived on PEGASUS: Peta-Scale Graph Mining System.
+Copyright (c) 2010 U Kang, Duen Horng Chau, and Christos Faloutsos
+Apache License, Version 2.0
+http://www.cs.cmu.edu/~pegasus/about.htm
+
+
+Third-party dependencies
+------------------------
+
+Apache Hadoop
+Copyright (c) Apache Software Foundation (ASF)
+Apache License, Version 2.0
+
+Apache MRUnit
+Copyright (c) Apache Software Foundation (ASF)
+Apache License, Version 2.0
+
+GNU Trove
+Copyright (c) 2001 Eric D. Friedman
+Lesser GNU Public License (LGPL) 
+
+Mockito
+Copyright (c) 2007 Mockito contributors 
+The MIT License
