@@ -31,7 +31,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.*;
 
-public class MatvecPrep extends Configured implements Tool {
+public class BlocksBuilder extends Configured implements Tool {
 
     public static class LightBlockWritable implements Writable {
 
@@ -211,7 +211,7 @@ public class MatvecPrep extends Configured implements Tool {
     protected boolean isVector = false;
 
     public static void main(final String[] args) throws Exception {
-        final int result = ToolRunner.run(new Configuration(), new MatvecPrep(), args);
+        final int result = ToolRunner.run(new Configuration(), new BlocksBuilder(), args);
         System.exit(result);
     }
 
@@ -227,7 +227,7 @@ public class MatvecPrep extends Configured implements Tool {
         System.out.println("[PEGASUS] Converting the adjacency matrix to block format. Output_prefix = " + output_prefix + ", block width=" + block_size + "\n");
 
        if (!configStage1().waitForCompletion(true)) {
-           System.err.println("Failed to execute MatvecPrep");
+           System.err.println("Failed to execute BlocksBuilder");
            return -1;
        }
 
@@ -243,7 +243,7 @@ public class MatvecPrep extends Configured implements Tool {
         conf.set("mapred.output.compression.type", "BLOCK"); // usefull ?
 
         Job job = new Job(conf, "MatvecPrep_Stage1");
-        job.setJarByClass(MatvecPrep.class);
+        job.setJarByClass(BlocksBuilder.class);
 
         job.setMapperClass(MapStage1.class);
         job.setReducerClass(RedStage1.class);

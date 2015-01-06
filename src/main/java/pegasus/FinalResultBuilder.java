@@ -25,9 +25,9 @@ import org.apache.hadoop.mapreduce.Mapper;
 
 import java.io.IOException;
 
-public class Stage3 {
+public class FinalResultBuilder {
 
-    public static class Mapper3 extends Mapper<BlockIndexWritable, BlockWritable, VLongWritable, Text> {
+    public static class _Mapper extends Mapper<BlockIndexWritable, BlockWritable, VLongWritable, Text> {
         int blockWidth;
 
         @Override

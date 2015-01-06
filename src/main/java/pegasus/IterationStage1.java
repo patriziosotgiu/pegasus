@@ -34,11 +34,11 @@ import java.io.IOException;
 import java.util.Iterator;
 
 //
-// Stage1: group blocks by (matrix_column | vector_row) and compute the *
+// IterationStage1: group blocks by (matrix_column | vector_row) and compute the *
 //
 // Use secondary sorting so that values in the reducers are sorted by types: vector block then matrix blocks.
 //
-public class Stage1 {
+public class IterationStage1 {
 
     public static class GIMV {
         private final static long NO_VALUE = -1L;
@@ -95,7 +95,6 @@ public class Stage1 {
                 WritableUtils.writeVLong(dataOutput, - (index + 1));
             } else {
                 WritableUtils.writeVLong(dataOutput, index + 1);
-
             }
         }
 
@@ -201,7 +200,7 @@ public class Stage1 {
 
     // TODO: use 2 distinct mappers and multiple input to avoid the if-else condition
     // output negative key to identify
-    public static class Mapper1 extends Mapper<BlockIndexWritable, BlockWritable, JoinKey, BlockWritable> {
+    public static class _Mapper extends Mapper<BlockIndexWritable, BlockWritable, JoinKey, BlockWritable> {
 
         private static JoinKey KEY   = new JoinKey();
         private static BlockWritable VALUE;
@@ -226,11 +225,11 @@ public class Stage1 {
                 ctx.getCounter(PegasusCounter.NUMBER_BLOCK_MATRIX).increment(1);
             }
             ctx.write(KEY, VALUE);
-            //System.out.println("Mapper1.map: " + KEY + ", " + VALUE);
+            //System.out.println("_Mapper.map: " + KEY + ", " + VALUE);
         }
     }
 
-    public static class Reducer1 extends Reducer<JoinKey, BlockWritable, VLongWritable, BlockWritable> {
+    public static class _Reducer extends Reducer<JoinKey, BlockWritable, VLongWritable, BlockWritable> {
 
         private BlockWritable initialVector = new BlockWritable();
 
@@ -242,7 +241,7 @@ public class Stage1 {
 
             Iterator<BlockWritable> it = values.iterator();
             initialVector.set(it.next());
-            //System.out.println("Reducer1.reduce input value: " + key + "," + initialVector);
+            //System.out.println("_Reducer.reduce input value: " + key + "," + initialVector);
 
             if (!initialVector.isTypeVector()) {
                 // missing vector... should never happen, right ? throw exception ?
@@ -254,15 +253,15 @@ public class Stage1 {
             VALUE.set(BlockWritable.TYPE.VECTOR_INITIAL, initialVector);
             KEY.set(key.index);
             ctx.write(KEY, VALUE);
-            //System.out.println("Reducer1.reduce: " + KEY + "," + VALUE);
+            //System.out.println("_Reducer.reduce: " + KEY + "," + VALUE);
 
             while (it.hasNext()) {
                 BlockWritable e = it.next();
-                //System.out.println("Reducer1.reduce input value: " + key + "," + e + ", initial vector: " + initialVector);
+                //System.out.println("_Reducer.reduce input value: " + key + "," + e + ", initial vector: " + initialVector);
                 KEY.set(e.getBlockRow());
                 VALUE.setVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, GIMV.minBlockVector(e, initialVector));
                 ctx.write(KEY, VALUE);
-                //System.out.println("Reducer1.reduce: " + KEY + "," + VALUE);
+                //System.out.println("_Reducer.reduce: " + KEY + "," + VALUE);
             }
         }
     }

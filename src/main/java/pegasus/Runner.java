@@ -74,11 +74,11 @@ public class Runner extends Configured implements Tool {
             Job job2 = configStage2();
 
             if (!job1.waitForCompletion(true)) {
-                System.err.println("Failed to execute Stage1 for iteration=" + n);
+                System.err.println("Failed to execute IterationStage1 for iteration=" + n);
                 return -1;
             }
             if (!job2.waitForCompletion(true)) {
-                System.err.println("Failed to execute Stage2 for iteration=" + n);
+                System.err.println("Failed to execute IterationStage2 for iteration=" + n);
                 return -1;
             }
 
@@ -94,7 +94,7 @@ public class Runner extends Configured implements Tool {
                 fs.rename(pathOutputStage2, pathVector);
                 System.out.println("Unfolding the block structure for easy lookup...");
                 if (!configStage3().waitForCompletion(true)) {
-                    System.err.println("Failed to execute Stage3 for iteration=" + n);
+                    System.err.println("Failed to execute FinalResultBuilder for iteration=" + n);
                     return -1;
                 }
                 break;
@@ -116,8 +116,8 @@ public class Runner extends Configured implements Tool {
         Job job = new Job(conf, "ConCmptBlock_pass1");
         job.setJarByClass(Runner.class);
 
-        job.setMapperClass(Stage1.Mapper1.class);
-        job.setReducerClass(Stage1.Reducer1.class);
+        job.setMapperClass(IterationStage1._Mapper.class);
+        job.setReducerClass(IterationStage1._Reducer.class);
 
         FileInputFormat.setInputPaths(job, pathEdges, pathVector);
         SequenceFileOutputFormat.setOutputPath(job, pathOutputStage1);
@@ -129,13 +129,13 @@ public class Runner extends Configured implements Tool {
 
         job.setNumReduceTasks(numberOfReducers);
 
-        job.setMapOutputKeyClass(Stage1.JoinKey.class);
+        job.setMapOutputKeyClass(IterationStage1.JoinKey.class);
         job.setMapOutputValueClass(BlockWritable.class);
         job.setOutputKeyClass(VLongWritable.class);
         job.setOutputValueClass(BlockWritable.class);
-        job.setGroupingComparatorClass(Stage1.IndexComparator.class);
-        job.setPartitionerClass(Stage1.IndexPartitioner.class);
-        job.setSortComparatorClass(Stage1.SortComparator.class);
+        job.setGroupingComparatorClass(IterationStage1.IndexComparator.class);
+        job.setPartitionerClass(IterationStage1.IndexPartitioner.class);
+        job.setSortComparatorClass(IterationStage1.SortComparator.class);
 
         setCompression(job);
 
@@ -150,7 +150,7 @@ public class Runner extends Configured implements Tool {
         conf.setInt("block_width", 32);
 
         job.setMapperClass(Mapper.class);
-        job.setReducerClass(Stage2.Reducer2.class);
+        job.setReducerClass(IterationStage2._Reducer.class);
 
         SequenceFileInputFormat.setInputPaths(job, pathOutputStage1);
         FileOutputFormat.setOutputPath(job, pathOutputStage2);
@@ -179,7 +179,7 @@ public class Runner extends Configured implements Tool {
 
         conf.setInt("block_width", 32);
 
-        job.setMapperClass(Stage3.Mapper3.class);
+        job.setMapperClass(FinalResultBuilder._Mapper.class);
 
         FileInputFormat.setInputPaths(job, pathVector);
         FileOutputFormat.setOutputPath(job, pathOutputVector);

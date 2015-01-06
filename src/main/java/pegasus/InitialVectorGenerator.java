@@ -30,9 +30,9 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.*;
 
-public class ConCmptIVGen extends Configured implements Tool {
+public class InitialVectorGenerator extends Configured implements Tool {
 
-    public static class MapStage1 extends Mapper<LongWritable, Text, VLongWritable, Text> {
+    public static class _Mapper extends Mapper<LongWritable, Text, VLongWritable, Text> {
         @Override
         public void map(LongWritable key, Text value, Context ctx) throws IOException, InterruptedException {
             String line_text = value.toString();
@@ -43,7 +43,7 @@ public class ConCmptIVGen extends Configured implements Tool {
         }
     }
 
-    public static class RedStage1 extends Reducer<VLongWritable, Text, VLongWritable, Text> {
+    public static class _Reducer extends Reducer<VLongWritable, Text, VLongWritable, Text> {
         private final VLongWritable KEY = new VLongWritable();
         private final Text VALUE = new Text();
 
@@ -76,7 +76,7 @@ public class ConCmptIVGen extends Configured implements Tool {
     protected int number_reducers = 1;
 
     public static void main(final String[] args) throws Exception {
-        final int result = ToolRunner.run(new Configuration(), new ConCmptIVGen(), args);
+        final int result = ToolRunner.run(new Configuration(), new InitialVectorGenerator(), args);
         System.exit(result);
     }
 
@@ -89,55 +89,51 @@ public class ConCmptIVGen extends Configured implements Tool {
         System.out.println("\n-----===[PEGASUS: A Peta-Scale Graph Mining System]===-----\n");
         System.out.println("[PEGASUS] Generating initial vector. Output path = " + args[0] + ", Number of nodes = " + number_nodes + ", Number of machines =" + number_reducers + "\n");
 
-        gen_cmd_file(number_nodes, number_reducers, pathBitmask);
+        genCmdFile(number_nodes, number_reducers, pathBitmask);
 
-        if (!configStage1().waitForCompletion(true)) {
-            System.err.println("Failed to execute ConCmptIVGen");
+        if (!buildJob().waitForCompletion(true)) {
+            System.err.println("Failed to execute InitialVectorGenerator");
             return -1;
         }
 
-        FileSystem.get(getConf()).delete(pathBitmask);
+        FileSystem.get(getConf()).delete(pathBitmask, false);
         System.out.println("\n[PEGASUS] Initial connected component vector generated in HDFS " + args[0] + "\n");
         return 0;
     }
 
     // generate bitmask command file which is used in the 1st iteration.
-    public void gen_cmd_file(long num_nodes, int num_reducers, Path output_path) throws IOException {
+    private void genCmdFile(long numberOfNodes, int numberOfReducers, Path outputPath) throws IOException {
         File tmpFile = File.createTempFile("pegasus_initial_vector", "");
         tmpFile.deleteOnExit();
 
         FileWriter file = new FileWriter(tmpFile);
         BufferedWriter out = new BufferedWriter(file);
 
-        System.out.print("creating initial vector generation cmd...");
-
-        long step = num_nodes / num_reducers;
+        long step = numberOfNodes / numberOfReducers;
         long start_node, end_node;
 
-        for (int i = 0; i < num_reducers; i++) {
+        for (int i = 0; i < numberOfReducers; i++) {
             start_node = i * step;
-            if (i < num_reducers - 1)
+            if (i < numberOfReducers - 1)
                 end_node = step * (i + 1) - 1;
             else
-                end_node = num_nodes - 1;
+                end_node = numberOfNodes - 1;
             out.write(i + "\t" + start_node + "\t" + end_node + "\n");
         }
         out.close();
-        System.out.println("done.");
-
-        final FileSystem fs = FileSystem.get(getConf());
-        fs.copyFromLocalFile(true, new Path(tmpFile.getAbsolutePath()), output_path);
+        FileSystem fs = FileSystem.get(getConf());
+        fs.copyFromLocalFile(true, new Path(tmpFile.getAbsolutePath()), outputPath);
     }
 
-    protected Job configStage1() throws Exception {
+    private Job buildJob() throws Exception {
         Configuration conf = getConf();
         conf.setLong("number_nodes", number_nodes);
 
-        Job job = new Job(conf, "ConCmptIVGen");
-        job.setJarByClass(ConCmptIVGen.class);
+        Job job = new Job(conf, "InitialVectorGenerator");
+        job.setJarByClass(InitialVectorGenerator.class);
 
-        job.setMapperClass(MapStage1.class);
-        job.setReducerClass(RedStage1.class);
+        job.setMapperClass(_Mapper.class);
+        job.setReducerClass(_Reducer.class);
 
         FileInputFormat.setInputPaths(job, pathBitmask);
         FileOutputFormat.setOutputPath(job, pathVector);

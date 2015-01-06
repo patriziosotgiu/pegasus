@@ -34,7 +34,7 @@ public class Runner2Test {
 
     @Before
     public void setUp() {
-        Stage2.Reducer2 reducer = new Stage2.Reducer2();
+        IterationStage2._Reducer reducer = new IterationStage2._Reducer();
         reduceDriver = ReduceDriver.newReduceDriver(reducer);
     }
 

@@ -31,21 +31,21 @@ import java.util.Arrays;
 
 public class Runner1Test {
 
-    MapDriver<BlockIndexWritable, BlockWritable, Stage1.JoinKey, BlockWritable> mapDriver;
-    ReduceDriver<Stage1.JoinKey, BlockWritable, VLongWritable, BlockWritable> reduceDriver;
-    MapReduceDriver<BlockIndexWritable, BlockWritable, Stage1.JoinKey, BlockWritable, VLongWritable, BlockWritable> mrDriver;
+    MapDriver<BlockIndexWritable, BlockWritable, IterationStage1.JoinKey, BlockWritable> mapDriver;
+    ReduceDriver<IterationStage1.JoinKey, BlockWritable, VLongWritable, BlockWritable> reduceDriver;
+    MapReduceDriver<BlockIndexWritable, BlockWritable, IterationStage1.JoinKey, BlockWritable, VLongWritable, BlockWritable> mrDriver;
 
 
     @Before
     public void setUp() {
-        Stage1.Mapper1 mapper = new Stage1.Mapper1();
+        IterationStage1._Mapper mapper = new IterationStage1._Mapper();
         mapDriver = MapDriver.newMapDriver(mapper);
 
-        Stage1.Reducer1 reducer = new Stage1.Reducer1();
+        IterationStage1._Reducer reducer = new IterationStage1._Reducer();
         reduceDriver = ReduceDriver.newReduceDriver(reducer);
 
         mrDriver = MapReduceDriver.newMapReduceDriver(mapper, reducer);
-        mrDriver.setKeyGroupingComparator(new Stage1.IndexComparator());
+        mrDriver.setKeyGroupingComparator(new IterationStage1.IndexComparator());
     }
 
     // group by vector.row and matrix.col
@@ -55,8 +55,8 @@ public class Runner1Test {
         mapDriver.addInput(blockIndex(1, 0), blockMatrix(1L, 1, 2, 1, 3, 4, 5));
         mapDriver.getConfiguration().setInt("block_width", 5);
 
-        mapDriver.addOutput(new Stage1.JoinKey(true, 0), blockVector(0, 11, 12, 13, 14));
-        mapDriver.addOutput(new Stage1.JoinKey(false, 0), blockMatrix(1L, 1, 2, 1, 3, 4, 5));
+        mapDriver.addOutput(new IterationStage1.JoinKey(true, 0), blockVector(0, 11, 12, 13, 14));
+        mapDriver.addOutput(new IterationStage1.JoinKey(false, 0), blockMatrix(1L, 1, 2, 1, 3, 4, 5));
 
         mapDriver.runTest();
     }
@@ -72,8 +72,8 @@ public class Runner1Test {
         mapDriver.addInput(blockIndex(0), blockVector(0, 1, 2));
         mapDriver.addInput(blockIndex(1, 0), blockMatrix(block_col, 0, 1, 1, 0, 1, 2, 2, 1));
 
-        mapDriver.addOutput(new Stage1.JoinKey(true, 0), blockVector(0, 1, 2));
-        mapDriver.addOutput(new Stage1.JoinKey(false, 0), blockMatrix(block_col, 0, 1, 1, 0, 1, 2, 2, 1));
+        mapDriver.addOutput(new IterationStage1.JoinKey(true, 0), blockVector(0, 1, 2));
+        mapDriver.addOutput(new IterationStage1.JoinKey(false, 0), blockMatrix(block_col, 0, 1, 1, 0, 1, 2, 2, 1));
 
         mapDriver.runTest();
     }
@@ -92,7 +92,7 @@ public class Runner1Test {
         BlockWritable e1 = blockVector(0, 1, 2);
         BlockWritable e2 = blockMatrix(block_col, 0, 1, 1, 0, 1, 2, 2, 1);
 
-        reduceDriver.addInput(new Stage1.JoinKey(true, block_col), Arrays.asList(e1, e2));
+        reduceDriver.addInput(new IterationStage1.JoinKey(true, block_col), Arrays.asList(e1, e2));
 
         BlockWritable v1 = blockVector(BlockWritable.TYPE.VECTOR_INITIAL, 0, 1, 2);
         BlockWritable v2 = blockVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, 1, 0, 1);
@@ -133,7 +133,7 @@ public class Runner1Test {
         BlockWritable e1 = blockVector(1, -1, -1);
         BlockWritable e2 = blockMatrix(block_col, 2, 0);
 
-        reduceDriver.addInput(new Stage1.JoinKey(true, block_col), Arrays.asList(e1, e2));
+        reduceDriver.addInput(new IterationStage1.JoinKey(true, block_col), Arrays.asList(e1, e2));
 
         BlockWritable v1 = blockVector(BlockWritable.TYPE.VECTOR_INITIAL, 1, -1, -1);
         BlockWritable v2 = blockVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, -1, -1, 1);

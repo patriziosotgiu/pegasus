@@ -26,11 +26,11 @@ import org.apache.hadoop.mapreduce.Reducer;
 import java.io.IOException;
 
 //
-// Stage2: group blocks by row and compute the +
+// IterationStage2: group blocks by row and compute the +
 //
-public class Stage2 {
+public class IterationStage2 {
 
-    public static class Reducer2 extends Reducer<VLongWritable, BlockWritable, BlockIndexWritable, BlockWritable> {
+    public static class _Reducer extends Reducer<VLongWritable, BlockWritable, BlockIndexWritable, BlockWritable> {
         protected int blockWidth;
 
         private final BlockIndexWritable KEY   = new BlockIndexWritable();
@@ -54,7 +54,7 @@ public class Stage2 {
             int n = 0;
             boolean isInitialVector = true;
             for (BlockWritable block : values) {
-                // System.out.println("Reducer2.reduce input: " + key + "," + block);
+                // System.out.println("_Reducer.reduce input: " + key + "," + block);
 
                 BlockWritable.TYPE t = block.getType();
                 if (t == BlockWritable.TYPE.VECTOR_FINAL || t == BlockWritable.TYPE.VECTOR_INITIAL) {
@@ -91,7 +91,7 @@ public class Stage2 {
             VALUE.setVector(type, res);
             KEY.setVectorIndex(key.get());
             ctx.write(KEY, VALUE);
-            //System.out.println("Reducer2.reduce: " + KEY + "," + VALUE);
+            //System.out.println("_Reducer.reduce: " + KEY + "," + VALUE);
             ctx.getCounter(noChange ? PegasusCounter.NUMBER_FINAL_VECTOR : PegasusCounter.NUMBER_INCOMPLETE_VECTOR)
                     .increment(1);
         }

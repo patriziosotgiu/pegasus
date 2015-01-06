@@ -27,17 +27,17 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-public class MatvecPrepTest {
-    MapDriver<LongWritable, Text, BlockIndexWritable, MatvecPrep.LightBlockWritable> mapDriver;
-    ReduceDriver<BlockIndexWritable, MatvecPrep.LightBlockWritable, BlockIndexWritable, BlockWritable> reduceDriver;
-    MapReduceDriver<LongWritable, Text, BlockIndexWritable, MatvecPrep.LightBlockWritable, BlockIndexWritable, BlockWritable> mrDriver;
+public class BlocksBuilderTest {
+    MapDriver<LongWritable, Text, BlockIndexWritable, BlocksBuilder.LightBlockWritable> mapDriver;
+    ReduceDriver<BlockIndexWritable, BlocksBuilder.LightBlockWritable, BlockIndexWritable, BlockWritable> reduceDriver;
+    MapReduceDriver<LongWritable, Text, BlockIndexWritable, BlocksBuilder.LightBlockWritable, BlockIndexWritable, BlockWritable> mrDriver;
 
 
     @Before
     public void setUp() {
-        MatvecPrep.MapStage1 mapper = new MatvecPrep.MapStage1();
+        BlocksBuilder.MapStage1 mapper = new BlocksBuilder.MapStage1();
         mapDriver = MapDriver.newMapDriver(mapper);
-        MatvecPrep.RedStage1 reducer = new MatvecPrep.RedStage1();
+        BlocksBuilder.RedStage1 reducer = new BlocksBuilder.RedStage1();
         reduceDriver = ReduceDriver.newReduceDriver(reducer);
         mrDriver = MapReduceDriver.newMapReduceDriver(mapper, reducer);
     }
