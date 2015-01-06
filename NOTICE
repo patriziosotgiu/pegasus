@@ -12,10 +12,9 @@ Jeffrey Picard <jeffrey.picard@placeiq.com>
 Original work
 -------------
 
-PIQASUS is strongly derived on PEGASUS: Peta-Scale Graph Mining System.
-Copyright (c) 2010 U Kang, Duen Horng Chau, and Christos Faloutsos
+PIQASUS is strongly derived from the work of U Kang, Duen Horng Chau and 
+Christos Faloutsos on the PEGASUS project: http://www.cs.cmu.edu/~pegasus/about.htm.
 Apache License, Version 2.0
-http://www.cs.cmu.edu/~pegasus/about.htm
 
 
 Third-party dependencies
