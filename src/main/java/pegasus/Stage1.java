@@ -209,8 +209,7 @@ public class Stage1 {
         @Override
         public void setup(Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            int block_width = Integer.parseInt(conf.get("block_width"));
-            VALUE = new BlockWritable(block_width);
+            VALUE = new BlockWritable(conf.getInt("block_width", 32));
         }
 
         @Override
@@ -232,19 +231,11 @@ public class Stage1 {
     }
 
     public static class Reducer1 extends Reducer<JoinKey, BlockWritable, VLongWritable, BlockWritable> {
-        protected int blockWidth;
 
         private BlockWritable initialVector = new BlockWritable();
 
         private VLongWritable  KEY   = new VLongWritable();
         private BlockWritable VALUE = new BlockWritable();
-
-        @Override
-        public void setup(Context ctx) {
-            Configuration conf = ctx.getConfiguration();
-            blockWidth = Integer.parseInt(conf.get("block_width"));
-            System.out.println("Reducer1: block_width=" + blockWidth);
-        }
 
         @Override
         public void reduce(JoinKey key, Iterable<BlockWritable> values, Context ctx) throws IOException, InterruptedException {

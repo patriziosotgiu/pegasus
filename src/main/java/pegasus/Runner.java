@@ -66,17 +66,21 @@ public class Runner extends Configured implements Tool {
         System.out.println("\n-----===[PEGASUS: A Peta-Scale Graph Mining System]===-----\n");
         System.out.println("[PEGASUS] Computing connected component using block method. Reducers = " + numberOfReducers + ", block_width = " + blockWidth);
 
-        final FileSystem fs = FileSystem.get(getConf());
+        FileSystem fs = FileSystem.get(getConf());
 
         int n = 0;
         for (; n < MAX_ITERATIONS; n++) {
             Job job1 = configStage1();
             Job job2 = configStage2();
 
-            boolean res1 = job1.waitForCompletion(true);
-            boolean res2 = job2.waitForCompletion(true);
-
-            // fixme: check return code
+            if (!job1.waitForCompletion(true)) {
+                System.err.println("Failed to execute Stage1 for iteration=" + n);
+                return -1;
+            }
+            if (!job2.waitForCompletion(true)) {
+                System.err.println("Failed to execute Stage2 for iteration=" + n);
+                return -1;
+            }
 
             long changed = job2.getCounters().findCounter(PegasusCounter.NUMBER_INCOMPLETE_VECTOR).getValue();
             long unchanged = job2.getCounters().findCounter(PegasusCounter.NUMBER_FINAL_VECTOR).getValue();
@@ -89,7 +93,10 @@ public class Runner extends Configured implements Tool {
                 fs.delete(pathVector, true);
                 fs.rename(pathOutputStage2, pathVector);
                 System.out.println("Unfolding the block structure for easy lookup...");
-                configStage3().waitForCompletion(true);  // fixme: check return code
+                if (!configStage3().waitForCompletion(true)) {
+                    System.err.println("Failed to execute Stage3 for iteration=" + n);
+                    return -1;
+                }
                 break;
             }
             fs.delete(pathOutputStage1, true);
@@ -104,7 +111,7 @@ public class Runner extends Configured implements Tool {
 
     protected Job configStage1() throws Exception {
         Configuration conf = getConf();
-        conf.set("block_width", "" + blockWidth);
+        conf.setInt("block_width", 32);
 
         Job job = new Job(conf, "ConCmptBlock_pass1");
         job.setJarByClass(Runner.class);
@@ -140,7 +147,7 @@ public class Runner extends Configured implements Tool {
 
         Job job = new Job(conf, "ConCmptBlock_pass2");
         job.setJarByClass(Runner.class);
-        conf.set("block_width", "" + blockWidth);
+        conf.setInt("block_width", 32);
 
         job.setMapperClass(Mapper.class);
         job.setReducerClass(Stage2.Reducer2.class);
@@ -170,7 +177,7 @@ public class Runner extends Configured implements Tool {
         Job job = new Job(conf, "ConCmptBlock_pass4");
         job.setJarByClass(Runner.class);
 
-        conf.set("block_width", "" + blockWidth);
+        conf.setInt("block_width", 32);
 
         job.setMapperClass(Stage3.Mapper3.class);
 

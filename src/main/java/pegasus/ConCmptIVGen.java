@@ -44,16 +44,8 @@ public class ConCmptIVGen extends Configured implements Tool {
     }
 
     public static class RedStage1 extends Reducer<VLongWritable, Text, VLongWritable, Text> {
-        long number_nodes = 0;
         private final VLongWritable KEY = new VLongWritable();
         private final Text VALUE = new Text();
-
-        @Override
-        public void setup(Context ctx) {
-            Configuration conf = ctx.getConfiguration();
-            number_nodes = Long.parseLong(conf.get("number_nodes"));
-            System.out.println("Reducer1: number_nodes = " + number_nodes);
-        }
 
         @Override
         public void reduce(VLongWritable key, Iterable<Text> values, Context ctx) throws IOException, InterruptedException {
@@ -99,12 +91,14 @@ public class ConCmptIVGen extends Configured implements Tool {
 
         gen_cmd_file(number_nodes, number_reducers, pathBitmask);
 
-        int res = configStage1().waitForCompletion(true) ? 0 : 1;
+        if (!configStage1().waitForCompletion(true)) {
+            System.err.println("Failed to execute ConCmptIVGen");
+            return -1;
+        }
+
         FileSystem.get(getConf()).delete(pathBitmask);
-
         System.out.println("\n[PEGASUS] Initial connected component vector generated in HDFS " + args[0] + "\n");
-
-        return res;
+        return 0;
     }
 
     // generate bitmask command file which is used in the 1st iteration.
@@ -137,7 +131,7 @@ public class ConCmptIVGen extends Configured implements Tool {
 
     protected Job configStage1() throws Exception {
         Configuration conf = getConf();
-        conf.set("number_nodes", "" + number_nodes);
+        conf.setLong("number_nodes", number_nodes);
 
         Job job = new Job(conf, "ConCmptIVGen");
         job.setJarByClass(ConCmptIVGen.class);

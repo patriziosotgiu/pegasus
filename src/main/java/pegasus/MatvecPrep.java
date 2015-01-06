@@ -118,7 +118,6 @@ public class MatvecPrep extends Configured implements Tool {
 
     public static class MapStage1 extends Mapper<LongWritable, Text, BlockIndexWritable, LightBlockWritable> {
         private int block_size;
-        private int makesym;
         private boolean isVector;
 
         private final BlockIndexWritable KEY = new BlockIndexWritable();
@@ -127,10 +126,8 @@ public class MatvecPrep extends Configured implements Tool {
         @Override
         public void setup(Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            block_size = Integer.parseInt(conf.get("block_size"));
-            makesym = Integer.parseInt(conf.get("makesym"));
+            block_size = conf.getInt("block_size", 32);
             isVector = conf.getBoolean("isVector", false);
-            System.out.println("MapStage1: block_size = " + block_size + ", makesym = " + makesym);
         }
 
         @Override
@@ -155,19 +152,16 @@ public class MatvecPrep extends Configured implements Tool {
                 }
                 long block_rowid = row_id / block_size;
                 long block_colid = col_id / block_size;
-                int in_block_row = (int) (row_id % block_size);  // get rided of transpose ? safe ?
-                int in_block_col = (int) (col_id % block_size); // get rided of transpose ? safe ?
+                int in_block_row = (int) (row_id % block_size);
+                int in_block_col = (int) (col_id % block_size);
 
                 VALUE.setMatrix(in_block_row, in_block_col);
                 KEY.setMatrixIndex(block_rowid, block_colid);
 
                 ctx.write(KEY, VALUE);
-                if (makesym == 1)
-                {
-                    VALUE.setMatrix(in_block_col, in_block_row);
-                    KEY.setMatrixIndex(block_colid, block_rowid);
-                    ctx.write(KEY, VALUE);
-                }
+                VALUE.setMatrix(in_block_col, in_block_row);
+                KEY.setMatrixIndex(block_colid, block_rowid);
+                ctx.write(KEY, VALUE);
             }
         }
     }
@@ -180,7 +174,7 @@ public class MatvecPrep extends Configured implements Tool {
         @Override
         public void setup(Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            blockSize = Integer.parseInt(conf.get("block_size"));
+            blockSize = conf.getInt("block_size", 32);
             isVector = conf.getBoolean("isVector", false);
             VALUE = new BlockWritable(blockSize, isVector ? BlockWritable.TYPE.VECTOR_INITIAL : BlockWritable.TYPE.MATRIX);
         }
@@ -214,7 +208,6 @@ public class MatvecPrep extends Configured implements Tool {
     protected int block_size = 1;
     protected int nreducer = 1;
     protected String output_prefix;
-    protected int makesym = 0;
     protected boolean isVector = false;
 
     public static void main(final String[] args) throws Exception {
@@ -228,23 +221,24 @@ public class MatvecPrep extends Configured implements Tool {
         block_size = Integer.parseInt(args[2]);
         nreducer = Integer.parseInt(args[3]);
 
-        makesym = 1;
         isVector = args[4].equals("vector");
 
         System.out.println("\n-----===[PEGASUS: A Peta-Scale Graph Mining System]===-----\n");
-        System.out.println("[PEGASUS] Converting the adjacency matrix to block format. Output_prefix = " + output_prefix + ", makesym = " + makesym + ", block width=" + block_size + "\n");
+        System.out.println("[PEGASUS] Converting the adjacency matrix to block format. Output_prefix = " + output_prefix + ", block width=" + block_size + "\n");
 
-        int res = configStage1().waitForCompletion(true) ? 0 : 1;
+       if (!configStage1().waitForCompletion(true)) {
+           System.err.println("Failed to execute MatvecPrep");
+           return -1;
+       }
 
         System.out.println("\n[PEGASUS] Conversion finished.");
         System.out.println("[PEGASUS] Block adjacency matrix is saved in the HDFS " + args[1] + "\n");
-        return res;
+        return 0;
     }
 
     protected Job configStage1() throws Exception {
         Configuration conf = getConf();
-        conf.set("block_size", "" + block_size);
-        conf.set("makesym", "" + makesym);
+        conf.setInt("block_size", block_size);
         conf.setBoolean("isVector", isVector);
         conf.set("mapred.output.compression.type", "BLOCK"); // usefull ?
 

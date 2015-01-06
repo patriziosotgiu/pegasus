@@ -33,8 +33,7 @@ public class Stage3 {
         @Override
         public void setup(Mapper.Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            blockWidth = Integer.parseInt(conf.get("block_width"));
-            System.out.println("Mapper3: block_width = " + blockWidth);
+            blockWidth = conf.getInt("block_width", 32);
         }
 
         public void map(BlockIndexWritable key, BlockWritable value, Context ctx) throws IOException, InterruptedException {

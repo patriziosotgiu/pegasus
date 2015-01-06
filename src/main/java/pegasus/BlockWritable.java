@@ -55,7 +55,6 @@ public class BlockWritable implements Writable {
     private TLongArrayList vectorElemValues = null;
 
     public BlockWritable() {
-        System.out.println("Create new BlockWritable with default constructor");
         init(1);
     }
 
@@ -68,7 +67,6 @@ public class BlockWritable implements Writable {
     }
 
     public BlockWritable(int blockSize) {
-        System.out.println("Create new BlockWritable with BlockWritable(blocksize)");
         init(blockSize);
     }
 
@@ -129,7 +127,6 @@ public class BlockWritable implements Writable {
             blockRow = WritableUtils.readVLong(dataInput);
             for (int i = 0; i < n; i++) {
                 matrixElemIndexes.add(WritableUtils.readVInt(dataInput));
-              //matrixElemIndexes.add(dataInput.readByte());
             }
         }
     }

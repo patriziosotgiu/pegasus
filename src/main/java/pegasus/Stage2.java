@@ -42,9 +42,8 @@ public class Stage2 {
         @Override
         public void setup(Reducer.Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            blockWidth = Integer.parseInt(conf.get("block_width"));
+            blockWidth = conf.getInt("block_width", 32);
             res = new TLongArrayList(blockWidth);
-            System.out.println("Reducer2: block_width=" + blockWidth);
         }
 
         @Override
