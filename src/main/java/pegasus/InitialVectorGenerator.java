@@ -106,21 +106,23 @@ public class InitialVectorGenerator extends Configured implements Tool {
         File tmpFile = File.createTempFile("pegasus_initial_vector", "");
         tmpFile.deleteOnExit();
 
-        FileWriter file = new FileWriter(tmpFile);
-        BufferedWriter out = new BufferedWriter(file);
+        try (BufferedWriter out = new BufferedWriter(new FileWriter(tmpFile))) {
+            long step = numberOfNodes / numberOfReducers;
+            long startNode;
+            long endNode;
 
-        long step = numberOfNodes / numberOfReducers;
-        long start_node, end_node;
-
-        for (int i = 0; i < numberOfReducers; i++) {
-            start_node = i * step;
-            if (i < numberOfReducers - 1)
-                end_node = step * (i + 1) - 1;
-            else
-                end_node = numberOfNodes - 1;
-            out.write(i + "\t" + start_node + "\t" + end_node + "\n");
+            for (int i = 0; i < numberOfReducers; i++) {
+                startNode = i * step;
+                if (i < numberOfReducers - 1) {
+                    endNode = step * (i + 1) - 1;
+                }
+                else {
+                    endNode = numberOfNodes - 1;
+                }
+                out.write(i + "\t" + startNode + "\t" + endNode + "\n");
+            }
         }
-        out.close();
+
         FileSystem fs = FileSystem.get(getConf());
         fs.copyFromLocalFile(true, new Path(tmpFile.getAbsolutePath()), outputPath);
     }
