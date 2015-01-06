@@ -1,3 +1,4 @@
+#!/bin/sh
 JAR=../target/Pegasus-1.3-SNAPSHOT-fatjar.jar
 
 WORK_DIR=pegasus_work
