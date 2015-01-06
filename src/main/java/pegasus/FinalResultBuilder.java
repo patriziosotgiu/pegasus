@@ -28,20 +28,25 @@ import java.io.IOException;
 public class FinalResultBuilder {
 
     public static class _Mapper extends Mapper<BlockIndexWritable, BlockWritable, VLongWritable, Text> {
-        int blockWidth;
+        private final VLongWritable KEY   = new VLongWritable();
+        private final Text          VALUE = new Text();
+
+        private int blockWidth = 32;
 
         @Override
         public void setup(Mapper.Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            blockWidth = conf.getInt("block_width", 32);
+            blockWidth = conf.getInt("blockWidth", 32);
         }
 
         public void map(BlockIndexWritable key, BlockWritable value, Context ctx) throws IOException, InterruptedException {
-            long block_id = key.getI();
+            long blockIdx = key.getI();
             for (int i = 0; i < value.getVectorElemValues().size(); i++) {
-                long component_id = value.getVectorElemValues().get(i);
-                if (component_id >= 0) {
-                    ctx.write(new VLongWritable(blockWidth * block_id + i), new Text("msf" + component_id));
+                long component = value.getVectorElemValues().get(i);
+                if (component >= 0) {
+                    KEY.set(blockWidth * blockIdx + i);
+                    VALUE.set("msf" + component);
+                    ctx.write(KEY, VALUE);
                 }
             }
         }

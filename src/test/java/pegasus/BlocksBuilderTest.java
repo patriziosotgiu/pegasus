@@ -32,7 +32,6 @@ public class BlocksBuilderTest {
     ReduceDriver<BlockIndexWritable, BlocksBuilder.LightBlockWritable, BlockIndexWritable, BlockWritable> reduceDriver;
     MapReduceDriver<LongWritable, Text, BlockIndexWritable, BlocksBuilder.LightBlockWritable, BlockIndexWritable, BlockWritable> mrDriver;
 
-
     @Before
     public void setUp() {
         BlocksBuilder.MapStage1 mapper = new BlocksBuilder.MapStage1();
@@ -52,8 +51,7 @@ public class BlocksBuilderTest {
     // 4       | x
     @Test
     public void simpleMatrix() throws IOException {
-        mrDriver.getConfiguration().set("block_size", "3");
-        mrDriver.getConfiguration().set("makesym", "1");
+        mrDriver.getConfiguration().setInt("blockWidth", 3);
         mrDriver.getConfiguration().setBoolean("isVector", false);
 
         mrDriver.addInput(new LongWritable(0), new Text("1\t2"));
@@ -95,8 +93,7 @@ public class BlocksBuilderTest {
 
     @Test
     public void simpleVector() throws IOException {
-        mrDriver.getConfiguration().set("block_size", "3");
-        mrDriver.getConfiguration().set("makesym", "7");
+        mrDriver.getConfiguration().setInt("blockWidth", 3);
         mrDriver.getConfiguration().setBoolean("isVector", true);
 
         mrDriver.addInput(new LongWritable(0), new Text("1\t1"));

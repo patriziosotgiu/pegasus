@@ -31,31 +31,29 @@ import java.io.IOException;
 public class IterationStage2 {
 
     public static class _Reducer extends Reducer<VLongWritable, BlockWritable, BlockIndexWritable, BlockWritable> {
-        protected int blockWidth;
-
         private final BlockIndexWritable KEY   = new BlockIndexWritable();
         private final BlockWritable      VALUE = new BlockWritable();
 
+        private int blockWidth;
         private TLongArrayList res = null;
         private BlockWritable initialVector = new BlockWritable();
 
         @Override
         public void setup(Reducer.Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            blockWidth = conf.getInt("block_width", 32);
+            blockWidth = conf.getInt("blockWidth", 32);
             res = new TLongArrayList(blockWidth);
         }
 
         @Override
         public void reduce(VLongWritable key, Iterable<BlockWritable> values, Context ctx) throws IOException, InterruptedException {
             boolean gotInitialVector = false;
-            res.fill(0, blockWidth, -2);
-
-            int n = 0;
             boolean isInitialVector = true;
+            int n = 0;
+
+            res.fill(0, blockWidth, -2);
             for (BlockWritable block : values) {
                 // System.out.println("_Reducer.reduce input: " + key + "," + block);
-
                 BlockWritable.TYPE t = block.getType();
                 if (t == BlockWritable.TYPE.VECTOR_FINAL || t == BlockWritable.TYPE.VECTOR_INITIAL) {
                     initialVector.set(block);
@@ -68,8 +66,6 @@ public class IterationStage2 {
 
                 for (int i = 0; i < block.getVectorElemValues().size(); i++) {
                     long v = block.getVectorElemValues().getQuick(i);
-                    // TODO: not efficient, move isInitialVector check outside the loop
-                    // TODO: a bit messy, if block is the initialVector then res will be set to block, usefull ?
                     if (isInitialVector && v == -1L) {
                         res.setQuick(i, -1L);
                     }

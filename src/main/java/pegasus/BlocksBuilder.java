@@ -35,12 +35,11 @@ public class BlocksBuilder extends Configured implements Tool {
 
     public static class LightBlockWritable implements Writable {
 
-        private int index1 = -1;
-        private int index2 = -1;
-        private long value = -1;
+        private int  index1 = -1;
+        private int  index2 = -1;
+        private long value  = -1;
 
         public LightBlockWritable() {
-
         }
 
         @Override
@@ -117,16 +116,17 @@ public class BlocksBuilder extends Configured implements Tool {
 
 
     public static class MapStage1 extends Mapper<LongWritable, Text, BlockIndexWritable, LightBlockWritable> {
-        private int block_size;
-        private boolean isVector;
 
-        private final BlockIndexWritable KEY = new BlockIndexWritable();
+        private final BlockIndexWritable KEY   = new BlockIndexWritable();
         private final LightBlockWritable VALUE = new LightBlockWritable();
+
+        private int     blockSize;
+        private boolean isVector;
 
         @Override
         public void setup(Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            block_size = conf.getInt("block_size", 32);
+            blockSize = conf.getInt("blockWidth", 32);
             isVector = conf.getBoolean("isVector", false);
         }
 
@@ -135,46 +135,47 @@ public class BlocksBuilder extends Configured implements Tool {
             String[] line = value.toString().split("\t");
 
             if (isVector) {
-                long row_id = Long.parseLong(line[0]);
-                long block_id = row_id / block_size;
-                long in_block_index = row_id % block_size;
+                long rowIdx     = Long.parseLong(line[0]);
+                long blockIdx   = rowIdx / blockSize;
+                int  inBlockIdx = (int) (rowIdx % blockSize);
 
-                VALUE.setVector((int)in_block_index, Long.parseLong(line[1]));
-                KEY.setVectorIndex(block_id);
+                VALUE.setVector(inBlockIdx, Long.parseLong(line[1]));
+                KEY.setVectorIndex(blockIdx);
                 ctx.write(KEY, VALUE);
             } else {
-                long row_id = Long.parseLong(line[0]);
-                long col_id = Long.parseLong(line[1]);
+                long rowIdx = Long.parseLong(line[0]);
+                long colIdx = Long.parseLong(line[1]);
 
-                if (col_id == row_id) {
+                if (colIdx == rowIdx) {
                     ctx.getCounter(PegasusCounter.NUMBER_SELF_LOOP).increment(1);
                     return;
                 }
-                long block_rowid = row_id / block_size;
-                long block_colid = col_id / block_size;
-                int in_block_row = (int) (row_id % block_size);
-                int in_block_col = (int) (col_id % block_size);
 
-                VALUE.setMatrix(in_block_row, in_block_col);
-                KEY.setMatrixIndex(block_rowid, block_colid);
+                long blockRowIdx   = rowIdx / blockSize;
+                long blockColIdx   = colIdx / blockSize;
+                int  inBlockRowIdx = (int) (rowIdx % blockSize);
+                int  inBlockColIdx = (int) (colIdx % blockSize);
 
+                VALUE.setMatrix(inBlockRowIdx, inBlockColIdx);
+                KEY.setMatrixIndex(blockRowIdx, blockColIdx);
                 ctx.write(KEY, VALUE);
-                VALUE.setMatrix(in_block_col, in_block_row);
-                KEY.setMatrixIndex(block_colid, block_rowid);
+
+                VALUE.setMatrix(inBlockColIdx, inBlockRowIdx);
+                KEY.setMatrixIndex(blockColIdx, blockRowIdx);
                 ctx.write(KEY, VALUE);
             }
         }
     }
 
     public static class RedStage1 extends Reducer<BlockIndexWritable, LightBlockWritable, BlockIndexWritable, BlockWritable> {
-        private BlockWritable VALUE = null;
-        private int blockSize;
-        private boolean isVector;
+        private BlockWritable VALUE      = null;
+        private int           blockSize  = 32;
+        private boolean       isVector   = false;
 
         @Override
         public void setup(Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            blockSize = conf.getInt("block_size", 32);
+            blockSize = conf.getInt("blockWidth", 32);
             isVector = conf.getBoolean("isVector", false);
             VALUE = new BlockWritable(blockSize, isVector ? BlockWritable.TYPE.VECTOR_INITIAL : BlockWritable.TYPE.MATRIX);
         }
@@ -203,12 +204,11 @@ public class BlocksBuilder extends Configured implements Tool {
         }
     }
 
-    protected Path pathEdges = null;
-    protected Path pathOutput = null;
-    protected int block_size = 1;
-    protected int nreducer = 1;
-    protected String output_prefix;
-    protected boolean isVector = false;
+    private Path    pathEdges        = null;
+    private Path    pathOutput       = null;
+    private int     blockSize        = 1;
+    private int     numberOfReducers = 1;
+    private boolean isVector         = false;
 
     public static void main(final String[] args) throws Exception {
         final int result = ToolRunner.run(new Configuration(), new BlocksBuilder(), args);
@@ -216,58 +216,45 @@ public class BlocksBuilder extends Configured implements Tool {
     }
 
     public int run(final String[] args) throws Exception {
-        pathEdges = new Path(args[0]);
-        pathOutput = new Path(args[1]);
-        block_size = Integer.parseInt(args[2]);
-        nreducer = Integer.parseInt(args[3]);
+        pathEdges        = new Path(args[0]);
+        pathOutput       = new Path(args[1]);
+        blockSize        = Integer.parseInt(args[2]);
+        numberOfReducers = Integer.parseInt(args[3]);
+        isVector         = args[4].equals("vector");
 
-        isVector = args[4].equals("vector");
-
-        System.out.println("\n-----===[PEGASUS: A Peta-Scale Graph Mining System]===-----\n");
-        System.out.println("[PEGASUS] Converting the adjacency matrix to block format. Output_prefix = " + output_prefix + ", block width=" + block_size + "\n");
-
-       if (!configStage1().waitForCompletion(true)) {
-           System.err.println("Failed to execute BlocksBuilder");
-           return -1;
-       }
-
-        System.out.println("\n[PEGASUS] Conversion finished.");
-        System.out.println("[PEGASUS] Block adjacency matrix is saved in the HDFS " + args[1] + "\n");
+        if (!configStage1().waitForCompletion(true)) {
+            System.err.println("Failed to execute BlocksBuilder");
+            return -1;
+        }
         return 0;
     }
 
     protected Job configStage1() throws Exception {
+        FileSystem fs = FileSystem.get(getConf());
+        fs.delete(pathOutput, true);   // useful ?
+
         Configuration conf = getConf();
-        conf.setInt("block_size", block_size);
+        conf.setInt("blockSize", blockSize);
         conf.setBoolean("isVector", isVector);
-        conf.set("mapred.output.compression.type", "BLOCK"); // usefull ?
+        conf.set("mapred.output.compression.type", "BLOCK"); // useful ?
 
         Job job = new Job(conf, "MatvecPrep_Stage1");
         job.setJarByClass(BlocksBuilder.class);
-
         job.setMapperClass(MapStage1.class);
         job.setReducerClass(RedStage1.class);
-
-        FileSystem fs = FileSystem.get(getConf());
-        fs.delete(pathOutput, true);
+        job.setOutputFormatClass(SequenceFileOutputFormat.class);
+        job.setNumReduceTasks(numberOfReducers);
+        job.setMapOutputKeyClass(BlockIndexWritable.class);
+        job.setMapOutputValueClass(LightBlockWritable.class);
+        job.setOutputKeyClass(BlockIndexWritable.class);
+        job.setOutputValueClass(BlockWritable.class);
 
         FileInputFormat.setInputPaths(job, pathEdges);
         SequenceFileOutputFormat.setOutputPath(job, pathOutput);
         SequenceFileOutputFormat.setCompressOutput(job, true);
-
-        job.setOutputFormatClass(SequenceFileOutputFormat.class);
-
-        job.setNumReduceTasks(nreducer);
-
-        job.setMapOutputKeyClass(BlockIndexWritable.class);
-        job.setMapOutputValueClass(LightBlockWritable.class);
-
-        job.setOutputKeyClass(BlockIndexWritable.class);
-        job.setOutputValueClass(BlockWritable.class);
 
         Runner.setCompression(job);
 
         return job;
     }
 }
-

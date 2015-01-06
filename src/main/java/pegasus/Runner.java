@@ -38,14 +38,14 @@ public class Runner extends Configured implements Tool {
 
     public static int MAX_ITERATIONS = 1024;
 
-    protected Path pathEdges = null;
-    protected Path pathVector = null;
-    protected Path workDir = null;
-    protected Path pathOutputStage1 = null;
-    protected Path pathOutputStage2 = null;
-    protected Path pathOutputVector = null;
-    protected int numberOfReducers = 1;
-    protected int blockWidth = 64;
+    private Path pathEdges        = null;
+    private Path pathVector       = null;
+    private Path workDir          = null;
+    private Path pathOutputStage1 = null;
+    private Path pathOutputStage2 = null;
+    private Path pathOutputVector = null;
+    private int  numberOfReducers = 1;
+    private int  blockWidth       = 64;
 
     public static void main(final String[] args) throws Exception {
         final int result = ToolRunner.run(new Configuration(), new Runner(), args);
@@ -53,82 +53,65 @@ public class Runner extends Configured implements Tool {
     }
 
     public int run(final String[] args) throws Exception {
-        pathEdges = new Path(args[0]);
-        pathVector = new Path(args[1]);
-        workDir = new Path(args[2]);
+        pathEdges        = new Path(args[0]);
+        pathVector       = new Path(args[1]);
+        workDir          = new Path(args[2]);
         pathOutputStage1 = new Path(workDir, "stage1");
         pathOutputStage2 = new Path(workDir, "stage2");
         pathOutputVector = new Path(workDir, "result");
         numberOfReducers = Integer.parseInt(args[3]);
-
-        blockWidth = Integer.parseInt(args[4]);
-
-        System.out.println("\n-----===[PEGASUS: A Peta-Scale Graph Mining System]===-----\n");
-        System.out.println("[PEGASUS] Computing connected component using block method. Reducers = " + numberOfReducers + ", block_width = " + blockWidth);
+        blockWidth       = Integer.parseInt(args[4]);
 
         FileSystem fs = FileSystem.get(getConf());
 
+        Job job1 = buildJob1();
+        Job job2 = buildJob2();
+        Job job3 = buildJob3();
+
         int n = 0;
         for (; n < MAX_ITERATIONS; n++) {
-            Job job1 = configStage1();
-            Job job2 = configStage2();
-
             if (!job1.waitForCompletion(true)) {
-                System.err.println("Failed to execute IterationStage1 for iteration=" + n);
+                System.err.println("Failed to execute IterationStage1 for iteration #" + n);
                 return -1;
             }
             if (!job2.waitForCompletion(true)) {
-                System.err.println("Failed to execute IterationStage2 for iteration=" + n);
+                System.err.println("Failed to execute IterationStage2 for iteration #" + n);
                 return -1;
             }
 
             long changed = job2.getCounters().findCounter(PegasusCounter.NUMBER_INCOMPLETE_VECTOR).getValue();
             long unchanged = job2.getCounters().findCounter(PegasusCounter.NUMBER_FINAL_VECTOR).getValue();
+            System.out.println("Iteration #" + n + ", changed=" + changed + ", unchanged=" + unchanged);
 
-            System.out.println("Hop " + n + " : changed = " + changed + ", unchanged = " + unchanged);
+            fs.delete(pathOutputStage1, true);
+            fs.delete(pathVector, true);
+            fs.rename(pathOutputStage2, pathVector);
 
             if (changed == 0) {
-                System.out.println("All the component ids converged. Finishing...");
-                fs.delete(pathOutputStage1, true);
-                fs.delete(pathVector, true);
-                fs.rename(pathOutputStage2, pathVector);
-                System.out.println("Unfolding the block structure for easy lookup...");
-                if (!configStage3().waitForCompletion(true)) {
-                    System.err.println("Failed to execute FinalResultBuilder for iteration=" + n);
+                if (!job3.waitForCompletion(true)) {
+                    System.err.println("Failed to execute FinalResultBuilder for iteration #" + n);
                     return -1;
                 }
                 break;
             }
-            fs.delete(pathOutputStage1, true);
-            fs.delete(pathVector, true);
-            fs.rename(pathOutputStage2, pathVector);
         }
-        System.out.println("\n[PEGASUS] Connected component computed.");
-        System.out.println("[PEGASUS] Total Iteration = " + n);
-        System.out.println("[PEGASUS] Connected component information is saved in the HDFS concmpt_curbm as\n\"node_id	'msf'component_id\" format");
+        System.out.println("Connected component computed in " + n + " iterations");
         return 0;
     }
 
-    protected Job configStage1() throws Exception {
+    private Job buildJob1() throws Exception {
         Configuration conf = getConf();
-        conf.setInt("block_width", 32);
+        conf.setInt("blockWidth", blockWidth);
+        conf.set("mapred.output.compression.type", "BLOCK");
 
         Job job = new Job(conf, "ConCmptBlock_pass1");
         job.setJarByClass(Runner.class);
 
         job.setMapperClass(IterationStage1._Mapper.class);
         job.setReducerClass(IterationStage1._Reducer.class);
-
-        FileInputFormat.setInputPaths(job, pathEdges, pathVector);
-        SequenceFileOutputFormat.setOutputPath(job, pathOutputStage1);
-        SequenceFileOutputFormat.setCompressOutput(job, true);
-
         job.setInputFormatClass(SequenceFileInputFormat.class);
         job.setOutputFormatClass(SequenceFileOutputFormat.class);
-        conf.set("mapred.output.compression.type", "BLOCK");
-
         job.setNumReduceTasks(numberOfReducers);
-
         job.setMapOutputKeyClass(IterationStage1.JoinKey.class);
         job.setMapOutputValueClass(BlockWritable.class);
         job.setOutputKeyClass(VLongWritable.class);
@@ -137,60 +120,57 @@ public class Runner extends Configured implements Tool {
         job.setPartitionerClass(IterationStage1.IndexPartitioner.class);
         job.setSortComparatorClass(IterationStage1.SortComparator.class);
 
+        FileInputFormat.setInputPaths(job, pathEdges, pathVector);
+        SequenceFileOutputFormat.setOutputPath(job, pathOutputStage1);
+        SequenceFileOutputFormat.setCompressOutput(job, true);
+
         setCompression(job);
 
         return job;
     }
 
-    protected Job configStage2() throws Exception {
+    private Job buildJob2() throws Exception {
         Configuration conf = getConf();
+        conf.setInt("blockWidth", blockWidth);
 
         Job job = new Job(conf, "ConCmptBlock_pass2");
         job.setJarByClass(Runner.class);
-        conf.setInt("block_width", 32);
 
         job.setMapperClass(Mapper.class);
         job.setReducerClass(IterationStage2._Reducer.class);
-
-        SequenceFileInputFormat.setInputPaths(job, pathOutputStage1);
-        FileOutputFormat.setOutputPath(job, pathOutputStage2);
-        FileOutputFormat.setCompressOutput(job, true);
-
         job.setNumReduceTasks(numberOfReducers);
-
         job.setInputFormatClass(SequenceFileInputFormat.class);
         job.setOutputFormatClass(SequenceFileOutputFormat.class);
-
         job.setMapOutputKeyClass(VLongWritable.class);
         job.setMapOutputValueClass(BlockWritable.class);
         job.setOutputKeyClass(BlockIndexWritable.class);
         job.setOutputValueClass(BlockWritable.class);
         job.setSortComparatorClass(VLongWritableComparator.class);
 
+        SequenceFileInputFormat.setInputPaths(job, pathOutputStage1);
+        FileOutputFormat.setOutputPath(job, pathOutputStage2);
+        FileOutputFormat.setCompressOutput(job, true);
+
         setCompression(job);
         return job;
     }
 
-    protected Job configStage3() throws Exception {
+    private Job buildJob3() throws Exception {
         Configuration conf = getConf();
+        conf.setInt("blockWidth", blockWidth);
 
         Job job = new Job(conf, "ConCmptBlock_pass4");
         job.setJarByClass(Runner.class);
 
-        conf.setInt("block_width", 32);
-
         job.setMapperClass(FinalResultBuilder._Mapper.class);
+        job.setInputFormatClass(SequenceFileInputFormat.class);
+        job.setNumReduceTasks(0);
+        job.setOutputKeyClass(VLongWritable.class);
+        job.setOutputValueClass(Text.class);
 
         FileInputFormat.setInputPaths(job, pathVector);
         FileOutputFormat.setOutputPath(job, pathOutputVector);
         FileOutputFormat.setCompressOutput(job, true);
-
-        job.setInputFormatClass(SequenceFileInputFormat.class);
-
-        job.setNumReduceTasks(0);
-
-        job.setOutputKeyClass(VLongWritable.class);
-        job.setOutputValueClass(Text.class);
 
         setCompression(job);
         return job;

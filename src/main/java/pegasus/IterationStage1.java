@@ -202,13 +202,13 @@ public class IterationStage1 {
     // output negative key to identify
     public static class _Mapper extends Mapper<BlockIndexWritable, BlockWritable, JoinKey, BlockWritable> {
 
-        private static JoinKey KEY   = new JoinKey();
-        private static BlockWritable VALUE;
+        private final JoinKey KEY = new JoinKey();
+        private BlockWritable VALUE;
 
         @Override
         public void setup(Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            VALUE = new BlockWritable(conf.getInt("block_width", 32));
+            VALUE = new BlockWritable(conf.getInt("blockWidth", 32));
         }
 
         @Override
@@ -231,35 +231,34 @@ public class IterationStage1 {
 
     public static class _Reducer extends Reducer<JoinKey, BlockWritable, VLongWritable, BlockWritable> {
 
-        private BlockWritable initialVector = new BlockWritable();
-
-        private VLongWritable  KEY   = new VLongWritable();
-        private BlockWritable VALUE = new BlockWritable();
+        private final BlockWritable INITIAL_VECTOR = new BlockWritable();
+        private final VLongWritable KEY            = new VLongWritable();
+        private final BlockWritable VALUE          = new BlockWritable();
 
         @Override
         public void reduce(JoinKey key, Iterable<BlockWritable> values, Context ctx) throws IOException, InterruptedException {
 
             Iterator<BlockWritable> it = values.iterator();
-            initialVector.set(it.next());
-            //System.out.println("_Reducer.reduce input value: " + key + "," + initialVector);
+            INITIAL_VECTOR.set(it.next());
+            //System.out.println("_Reducer.reduce input value: " + key + "," + INITIAL_VECTOR);
 
-            if (!initialVector.isTypeVector()) {
+            if (!INITIAL_VECTOR.isTypeVector()) {
                 // missing vector... should never happen, right ? throw exception ?
                 ctx.getCounter(PegasusCounter.ERROR_NO_INITIAL_VECTOR).increment(1);
-                System.err.println("error: no vector, key=" + key + ", first_value=" + initialVector);
+                System.err.println("error: no vector, key=" + key + ", first_value=" + INITIAL_VECTOR);
                 return;
             }
 
-            VALUE.set(BlockWritable.TYPE.VECTOR_INITIAL, initialVector);
+            VALUE.set(BlockWritable.TYPE.VECTOR_INITIAL, INITIAL_VECTOR);
             KEY.set(key.index);
             ctx.write(KEY, VALUE);
             //System.out.println("_Reducer.reduce: " + KEY + "," + VALUE);
 
             while (it.hasNext()) {
                 BlockWritable e = it.next();
-                //System.out.println("_Reducer.reduce input value: " + key + "," + e + ", initial vector: " + initialVector);
+                //System.out.println("_Reducer.reduce input value: " + key + "," + e + ", initial vector: " + INITIAL_VECTOR);
                 KEY.set(e.getBlockRow());
-                VALUE.setVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, GIMV.minBlockVector(e, initialVector));
+                VALUE.setVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, GIMV.minBlockVector(e, INITIAL_VECTOR));
                 ctx.write(KEY, VALUE);
                 //System.out.println("_Reducer.reduce: " + KEY + "," + VALUE);
             }
