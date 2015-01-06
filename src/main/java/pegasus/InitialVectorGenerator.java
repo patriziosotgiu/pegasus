@@ -121,7 +121,7 @@ public class InitialVectorGenerator extends Configured implements Tool {
         Configuration conf = getConf();
         conf.setLong("numberOfNodes", numberOfNodes);
 
-        Job job = new Job(conf, "InitialVectorGenerator");
+        Job job = new Job(conf, "data-piqid.pegasus.ConCmptIVGen_Stage1");
         job.setJarByClass(InitialVectorGenerator.class);
         job.setMapperClass(_Mapper.class);
         job.setReducerClass(_Reducer.class);

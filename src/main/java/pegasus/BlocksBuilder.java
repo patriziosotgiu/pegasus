@@ -238,7 +238,7 @@ public class BlocksBuilder extends Configured implements Tool {
         conf.setBoolean("isVector", isVector);
         conf.set("mapred.output.compression.type", "BLOCK"); // useful ?
 
-        Job job = new Job(conf, "MatvecPrep_Stage1");
+        Job job = new Job(conf, "data-piqid.pegasus.MatvecPrep_Stage1");
         job.setJarByClass(BlocksBuilder.class);
         job.setMapperClass(MapStage1.class);
         job.setReducerClass(RedStage1.class);

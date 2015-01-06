@@ -62,6 +62,16 @@ public class Runner extends Configured implements Tool {
         numberOfReducers = Integer.parseInt(args[3]);
         blockWidth       = Integer.parseInt(args[4]);
 
+        int maxConvergence = Integer.parseInt(args[5]);
+        int maxIters = Integer.parseInt(args[6]);
+
+        if (maxConvergence < 0) {
+            maxConvergence = 0;
+        }
+        if (maxIters < 0 || maxIters > MAX_ITERATIONS) {
+             maxIters = MAX_ITERATIONS;
+        }
+
         FileSystem fs = FileSystem.get(getConf());
 
         Job job1 = buildJob1();
@@ -87,7 +97,7 @@ public class Runner extends Configured implements Tool {
             fs.delete(pathVector, true);
             fs.rename(pathOutputStage2, pathVector);
 
-            if (changed == 0) {
+            if (changed <= maxConvergence || n >= maxIters) {
                 if (!job3.waitForCompletion(true)) {
                     System.err.println("Failed to execute FinalResultBuilder for iteration #" + n);
                     return -1;
@@ -104,7 +114,7 @@ public class Runner extends Configured implements Tool {
         conf.setInt("blockWidth", blockWidth);
         conf.set("mapred.output.compression.type", "BLOCK");
 
-        Job job = new Job(conf, "ConCmptBlock_pass1");
+        Job job = new Job(conf, "data-piqid.pegasus.ConCmptBlock_pass1");
         job.setJarByClass(Runner.class);
 
         job.setMapperClass(IterationStage1._Mapper.class);
@@ -133,7 +143,7 @@ public class Runner extends Configured implements Tool {
         Configuration conf = getConf();
         conf.setInt("blockWidth", blockWidth);
 
-        Job job = new Job(conf, "ConCmptBlock_pass2");
+        Job job = new Job(conf, "data-piqid.pegasus.ConCmptBlock_pass2");
         job.setJarByClass(Runner.class);
 
         job.setMapperClass(Mapper.class);
@@ -159,7 +169,7 @@ public class Runner extends Configured implements Tool {
         Configuration conf = getConf();
         conf.setInt("blockWidth", blockWidth);
 
-        Job job = new Job(conf, "ConCmptBlock_pass4");
+        Job job = new Job(conf, "data-piqid.pegasus.ConCmptBlock_pass4");
         job.setJarByClass(Runner.class);
 
         job.setMapperClass(FinalResultBuilder._Mapper.class);
