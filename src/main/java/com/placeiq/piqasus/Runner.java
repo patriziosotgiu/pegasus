@@ -176,7 +176,7 @@ public class Runner extends Configured implements Tool {
         job.setInputFormatClass(SequenceFileInputFormat.class);
         job.setNumReduceTasks(0);
         job.setOutputKeyClass(VLongWritable.class);
-        job.setOutputValueClass(Text.class);
+        job.setOutputValueClass(VLongWritable.class);
 
         FileInputFormat.setInputPaths(job, pathVector);
         FileOutputFormat.setOutputPath(job, pathOutputVector);
