@@ -72,40 +72,38 @@ public class Runner extends Configured implements Tool {
 
         FileSystem fs = FileSystem.get(getConf());
 
-        Job job1 = buildJob1(pathEdges, pathVector, pathOutputStage1);
-        Job job2 = buildJob2(pathOutputStage1, pathOutputStage2);
-        Job job3 = buildJob3(pathVector, pathOutputVector);
-
         int n = 0;
-        for (; n < MAX_ITERATIONS; n++) {
+        long changedNodes = Long.MAX_VALUE;
+        while (n < maxIters && changedNodes > maxConvergence) {
             fs.delete(pathOutputStage1, true);
             fs.delete(pathOutputStage2, true);
-
             LOG.info("Start iteration " + n + " Stage1");
+            Job job1 = buildJob1(pathEdges, pathVector, pathOutputStage1);
             if (!job1.waitForCompletion(true)) {
                 LOG.error("Failed to execute IterationStage1 for iteration #" + n);
                 return -1;
             }
             LOG.info("Start iteration " + n + " Stage2");
+            Job job2 = buildJob2(pathOutputStage1, pathOutputStage2);
             if (!job2.waitForCompletion(true)) {
                 LOG.error("Failed to execute IterationStage2 for iteration #" + n);
                 return -1;
             }
-
-            long changed = job2.getCounters().findCounter(PiqasusCounter.NUMBER_INCOMPLETE_VECTOR).getValue();
-            long unchanged = job2.getCounters().findCounter(PiqasusCounter.NUMBER_FINAL_VECTOR).getValue();
-            LOG.info("End of iteration " + n + ", changed=" + changed + ", unchanged=" + unchanged);
-
-            fs.rename(pathOutputStage2, pathVector);
-            if (true) return -1;
-
-            if (changed <= maxConvergence || n >= maxIters) {
-                if (!job3.waitForCompletion(true)) {
-                    LOG.error("Failed to execute FinalResultBuilder for iteration #" + n);
-                    return -1;
-                }
-                break;
+            changedNodes = job2.getCounters().findCounter(PiqasusCounter.NUMBER_INCOMPLETE_VECTOR).getValue();
+            long unchangedNodes = job2.getCounters().findCounter(PiqasusCounter.NUMBER_FINAL_VECTOR).getValue();
+            LOG.info("End of iteration " + n + ", changedNodes=" + changedNodes + ", unchangedNodes=" + unchangedNodes);
+            LOG.info(pathOutputStage2);
+            fs.delete(pathVector, true);
+            if (!fs.rename(pathOutputStage2, pathVector)) {
+                LOG.error("failed to rename " + pathOutputStage2 + " into " + pathVector);
+                return -1;
             }
+            n++;
+        }
+        Job job3 = buildJob3(pathVector, pathOutputVector);
+        if (!job3.waitForCompletion(true)) {
+            LOG.error("Failed to execute FinalResultBuilder for iteration #" + n);
+            return -1;
         }
         LOG.info("Connected component computed in " + n + " iterations");
         return 0;
@@ -190,6 +188,6 @@ public class Runner extends Configured implements Tool {
 
     public static void setCompression(Job job) {
      //   FileOutputFormat.setOutputCompressorClass(job, GzipCodec.class);
-     //    FileOutputFormat.setOutputCompressorClass(job, SnappyCodec.class);
+        FileOutputFormat.setOutputCompressorClass(job, SnappyCodec.class);
     }
 }
