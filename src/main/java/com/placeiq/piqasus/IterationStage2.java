@@ -34,15 +34,15 @@ public class IterationStage2 {
         private final BlockIndexWritable KEY   = new BlockIndexWritable();
         private final BlockWritable      VALUE = new BlockWritable();
 
-        private int blockWidth;
+        private int blockSize;
         private TLongArrayList res = null;
         private BlockWritable initialVector = new BlockWritable();
 
         @Override
         public void setup(Reducer.Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            blockWidth = conf.getInt("blockWidth", 32);
-            res = new TLongArrayList(blockWidth);
+            blockSize = conf.getInt(Constants.PROP_BLOCK_SIZE, 32);
+            res = new TLongArrayList(blockSize);
         }
 
         @Override
@@ -51,9 +51,9 @@ public class IterationStage2 {
             boolean isInitialVector = true;
             int n = 0;
 
-            res.fill(0, blockWidth, -2);
+            res.fill(0, blockSize, -2);
             for (BlockWritable block : values) {
-                // System.out.println("_Reducer.reduce input: " + key + "," + block);
+                System.out.println("_Reducer.reduce input: " + key + "," + block);
                 BlockWritable.TYPE t = block.getType();
                 if (t == BlockWritable.TYPE.VECTOR_FINAL || t == BlockWritable.TYPE.VECTOR_INITIAL) {
                     initialVector.set(block);

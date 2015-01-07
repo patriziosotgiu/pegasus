@@ -210,7 +210,9 @@ public class IterationStage1 {
         @Override
         public void setup(Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            VALUE = new BlockWritable(conf.getInt("blockWidth", 32));
+            VALUE = new BlockWritable(conf.getInt(Constants.PROP_BLOCK_SIZE, 32));
+            System.out.println("blockWidth: " + conf.getInt(Constants.PROP_BLOCK_SIZE, 32));
+
         }
 
         @Override
@@ -227,7 +229,7 @@ public class IterationStage1 {
                 ctx.getCounter(PiqasusCounter.NUMBER_BLOCK_MATRIX).increment(1);
             }
             ctx.write(KEY, VALUE);
-            //System.out.println("_Mapper.map: " + KEY + ", " + VALUE);
+            System.out.println("_Mapper.map: " + KEY + ", " + VALUE);
         }
     }
 

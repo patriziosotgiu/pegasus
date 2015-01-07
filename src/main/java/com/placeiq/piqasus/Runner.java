@@ -22,9 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.VLongWritable;
-import org.apache.hadoop.io.compress.SnappyCodec;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
@@ -45,7 +43,7 @@ public class Runner extends Configured implements Tool {
     private Path pathOutputStage2 = null;
     private Path pathOutputVector = null;
     private int  numberOfReducers = 1;
-    private int  blockWidth       = 64;
+    private int blockSize = 64;
 
     public static void main(final String[] args) throws Exception {
         final int result = ToolRunner.run(new Configuration(), new Runner(), args);
@@ -60,7 +58,7 @@ public class Runner extends Configured implements Tool {
         pathOutputStage2 = new Path(workDir, "stage2");
         pathOutputVector = new Path(workDir, "result");
         numberOfReducers = Integer.parseInt(args[3]);
-        blockWidth       = Integer.parseInt(args[4]);
+        blockSize = Integer.parseInt(args[4]);
 
         int maxConvergence = Integer.parseInt(args[5]);
         int maxIters = Integer.parseInt(args[6]);
@@ -80,6 +78,7 @@ public class Runner extends Configured implements Tool {
 
         int n = 0;
         for (; n < MAX_ITERATIONS; n++) {
+            fs.delete(pathOutputStage1, true);
             if (!job1.waitForCompletion(true)) {
                 System.err.println("Failed to execute IterationStage1 for iteration #" + n);
                 return -1;
@@ -93,10 +92,7 @@ public class Runner extends Configured implements Tool {
             long unchanged = job2.getCounters().findCounter(PiqasusCounter.NUMBER_FINAL_VECTOR).getValue();
             System.out.println("Iteration #" + n + ", changed=" + changed + ", unchanged=" + unchanged);
 
-            fs.delete(pathOutputStage1, true);
-            fs.delete(pathVector, true);
             fs.rename(pathOutputStage2, pathVector);
-
             if (changed <= maxConvergence || n >= maxIters) {
                 if (!job3.waitForCompletion(true)) {
                     System.err.println("Failed to execute FinalResultBuilder for iteration #" + n);
@@ -111,7 +107,7 @@ public class Runner extends Configured implements Tool {
 
     private Job buildJob1() throws Exception {
         Configuration conf = getConf();
-        conf.setInt("blockWidth", blockWidth);
+        conf.setInt(Constants.PROP_BLOCK_SIZE, blockSize);
         conf.set("mapred.output.compression.type", "BLOCK");
 
         Job job = new Job(conf, "data-piqid.piqasus.IterationStage1");
@@ -141,7 +137,7 @@ public class Runner extends Configured implements Tool {
 
     private Job buildJob2() throws Exception {
         Configuration conf = getConf();
-        conf.setInt("blockWidth", blockWidth);
+        conf.setInt(Constants.PROP_BLOCK_SIZE, blockSize);
 
         Job job = new Job(conf, "data-piqid.piqasus.IterationStage2");
         job.setJarByClass(Runner.class);
@@ -167,7 +163,7 @@ public class Runner extends Configured implements Tool {
 
     private Job buildJob3() throws Exception {
         Configuration conf = getConf();
-        conf.setInt("blockWidth", blockWidth);
+        conf.setInt(Constants.PROP_BLOCK_SIZE, blockSize);
 
         Job job = new Job(conf, "data-piqid.piqasus.FinalResultBuilder");
         job.setJarByClass(Runner.class);
@@ -188,6 +184,6 @@ public class Runner extends Configured implements Tool {
 
     public static void setCompression(Job job) {
      //   FileOutputFormat.setOutputCompressorClass(job, GzipCodec.class);
-         FileOutputFormat.setOutputCompressorClass(job, SnappyCodec.class);
+     //    FileOutputFormat.setOutputCompressorClass(job, SnappyCodec.class);
     }
 }

@@ -52,7 +52,7 @@ public class BlocksBuilderTest {
     // 4       | x
     @Test
     public void simpleMatrix() throws IOException {
-        mrDriver.getConfiguration().setInt("blockWidth", 3);
+        mrDriver.getConfiguration().setInt(Constants.PROP_BLOCK_SIZE, 3);
         mrDriver.getConfiguration().setBoolean("isVector", false);
 
         mrDriver.addInput(new LongWritable(0), new Text("1\t2"));
@@ -94,7 +94,7 @@ public class BlocksBuilderTest {
 
     @Test
     public void simpleVector() throws IOException {
-        mrDriver.getConfiguration().setInt("blockWidth", 3);
+        mrDriver.getConfiguration().setInt(Constants.PROP_BLOCK_SIZE, 3);
         mrDriver.getConfiguration().setBoolean("isVector", true);
 
         mrDriver.addInput(new LongWritable(0), new Text("1\t1"));

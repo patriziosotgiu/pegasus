@@ -54,7 +54,7 @@ public class Runner1Test {
     public void map() throws IOException {
         mapDriver.addInput(blockIndex(0), blockVector(0, 11, 12, 13, 14));
         mapDriver.addInput(blockIndex(1, 0), blockMatrix(1L, 1, 2, 1, 3, 4, 5));
-        mapDriver.getConfiguration().setInt("blockWidth", 5);
+        mapDriver.getConfiguration().setInt(Constants.PROP_BLOCK_SIZE, 5);
 
         mapDriver.addOutput(new IterationStage1.JoinKey(true, 0), blockVector(0, 11, 12, 13, 14));
         mapDriver.addOutput(new IterationStage1.JoinKey(false, 0), blockMatrix(1L, 1, 2, 1, 3, 4, 5));
@@ -65,7 +65,7 @@ public class Runner1Test {
     // group by vector.row and matrix.col
     @Test
     public void map2() throws IOException {
-        mapDriver.getConfiguration().setInt("blockWidth", 3);
+        mapDriver.getConfiguration().setInt(Constants.PROP_BLOCK_SIZE, 3);
 
         int block_col = 1;
 
@@ -84,7 +84,7 @@ public class Runner1Test {
     //     |0 1 0|      |2|        |1|
     @Test
     public void reduce() throws IOException {
-        reduceDriver.getConfiguration().setInt("blockWidth", 3);
+        reduceDriver.getConfiguration().setInt(Constants.PROP_BLOCK_SIZE, 3);
 
         int block_col = 0;
 
@@ -107,7 +107,7 @@ public class Runner1Test {
     //     |0 1 0|      |2|        |1|
     @Test
     public void mapReduce() throws IOException {
-        mrDriver.getConfiguration().setInt("blockWidth", 3);
+        mrDriver.getConfiguration().setInt(Constants.PROP_BLOCK_SIZE, 3);
 
         mrDriver.addInput(blockIndex(0), blockVector(0, 1, 2));
         mrDriver.addInput(blockIndex(0, 0), blockMatrix(1, 0, 1, 1, 0, 1, 2, 2, 1));
@@ -123,7 +123,7 @@ public class Runner1Test {
     //     |1 0 0|      |-1|        | 1|
     @Test
     public void reduce2() throws IOException {
-        reduceDriver.getConfiguration().setInt("blockWidth", 3);
+        reduceDriver.getConfiguration().setInt(Constants.PROP_BLOCK_SIZE, 3);
 
         int block_col = 0;
 
@@ -164,7 +164,7 @@ public class Runner1Test {
 
     @Test
     public void mapReduce2() throws IOException {
-        mrDriver.getConfiguration().setInt("blockWidth", 2);
+        mrDriver.getConfiguration().setInt(Constants.PROP_BLOCK_SIZE, 2);
 
         mrDriver.addInput(blockIndex(0), blockVector(0, 1));
         mrDriver.addInput(blockIndex(1), blockVector(2, 3));

@@ -134,8 +134,8 @@ public class BlocksBuilder extends Configured implements Tool {
         @Override
         public void setup(Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            blockSize = conf.getInt("blockWidth", 32);
-            isVector = conf.getBoolean("isVector", false);
+            blockSize = conf.getInt(Constants.PROP_BLOCK_SIZE, 32);
+            isVector = conf.getBoolean(Constants.PROP_IS_VECTOR, false);
         }
 
         @Override
@@ -183,8 +183,8 @@ public class BlocksBuilder extends Configured implements Tool {
         @Override
         public void setup(Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            blockSize = conf.getInt("blockWidth", 32);
-            isVector = conf.getBoolean("isVector", false);
+            blockSize = conf.getInt(Constants.PROP_BLOCK_SIZE, 32);
+            isVector = conf.getBoolean(Constants.PROP_IS_VECTOR, false);
             VALUE = new BlockWritable(blockSize, isVector ? BlockWritable.TYPE.VECTOR_INITIAL : BlockWritable.TYPE.MATRIX);
         }
 
@@ -242,8 +242,8 @@ public class BlocksBuilder extends Configured implements Tool {
         fs.delete(pathOutput, true);   // useful ?
 
         Configuration conf = getConf();
-        conf.setInt("blockSize", blockSize);
-        conf.setBoolean("isVector", isVector);
+        conf.setInt(Constants.PROP_BLOCK_SIZE, blockSize);
+        conf.setBoolean(Constants.PROP_IS_VECTOR, isVector);
         conf.set("mapred.output.compression.type", "BLOCK"); // useful ?
 
         Job job = new Job(conf, "data-piqid.piqasus.BlocksBuilder");

@@ -57,7 +57,7 @@ public class Runner2Test {
     //
     @Test
     public void reduce1() throws IOException {
-        reduceDriver.getConfiguration().setInt("blockWidth", 2);
+        reduceDriver.getConfiguration().setInt(Constants.PROP_BLOCK_SIZE, 2);
 
         reduceDriver.addInput(new VLongWritable(0), Arrays.asList(
                 blockVector(TYPE.VECTOR_INITIAL, 0, 1),
@@ -82,7 +82,7 @@ public class Runner2Test {
     //
     @Test
     public void reduce2() throws IOException {
-        reduceDriver.getConfiguration().setInt("blockWidth", 3);
+        reduceDriver.getConfiguration().setInt(Constants.PROP_BLOCK_SIZE, 3);
 
         reduceDriver.addInput(new VLongWritable(0), Arrays.asList(
                 blockVector(TYPE.VECTOR_INITIAL, 0, 1, 3),
@@ -101,7 +101,7 @@ public class Runner2Test {
     //
     @Test
     public void reduce3() throws IOException {
-        reduceDriver.getConfiguration().setInt("blockWidth", 3);
+        reduceDriver.getConfiguration().setInt(Constants.PROP_BLOCK_SIZE, 3);
 
         reduceDriver.addInput(new VLongWritable(0), Arrays.asList(
                 blockVector(TYPE.VECTOR_INITIAL, 3, -1, -1),

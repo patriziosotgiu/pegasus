@@ -19,7 +19,6 @@
 package com.placeiq.piqasus;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.mapreduce.Mapper;
 
@@ -31,12 +30,12 @@ public class FinalResultBuilder {
         private final VLongWritable KEY   = new VLongWritable();
         private final VLongWritable VALUE = new VLongWritable();
 
-        private int blockWidth = 32;
+        private int blockSize = 32;
 
         @Override
         public void setup(Mapper.Context ctx) {
             Configuration conf = ctx.getConfiguration();
-            blockWidth = conf.getInt("blockWidth", 32);
+            blockSize = conf.getInt(Constants.PROP_BLOCK_SIZE, 32);
         }
 
         public void map(BlockIndexWritable key, BlockWritable value, Context ctx) throws IOException, InterruptedException {
@@ -44,7 +43,7 @@ public class FinalResultBuilder {
             for (int i = 0; i < value.getVectorElemValues().size(); i++) {
                 long component = value.getVectorElemValues().get(i);
                 if (component >= 0) {
-                    KEY.set(blockWidth * blockIdx + i);
+                    KEY.set(blockSize * blockIdx + i);
                     VALUE.set(component);
                     ctx.write(KEY, VALUE);
                 }
