@@ -32,9 +32,14 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+
 public class Runner extends Configured implements Tool {
 
     public static int MAX_ITERATIONS = 1024;
+
+    private static final Logger LOG = LogManager.getLogger(Runner.class);
 
     private int numberOfReducers = 1;
     private int blockSize = 64;
@@ -76,29 +81,33 @@ public class Runner extends Configured implements Tool {
             fs.delete(pathOutputStage1, true);
             fs.delete(pathOutputStage2, true);
 
+            LOG.info("Start iteration " + n + " Stage1");
             if (!job1.waitForCompletion(true)) {
-                System.err.println("Failed to execute IterationStage1 for iteration #" + n);
+                LOG.error("Failed to execute IterationStage1 for iteration #" + n);
                 return -1;
             }
+            LOG.info("Start iteration " + n + " Stage2");
             if (!job2.waitForCompletion(true)) {
-                System.err.println("Failed to execute IterationStage2 for iteration #" + n);
+                LOG.error("Failed to execute IterationStage2 for iteration #" + n);
                 return -1;
             }
 
             long changed = job2.getCounters().findCounter(PiqasusCounter.NUMBER_INCOMPLETE_VECTOR).getValue();
             long unchanged = job2.getCounters().findCounter(PiqasusCounter.NUMBER_FINAL_VECTOR).getValue();
-            System.out.println("Iteration #" + n + ", changed=" + changed + ", unchanged=" + unchanged);
+            LOG.info("End of iteration " + n + ", changed=" + changed + ", unchanged=" + unchanged);
 
             fs.rename(pathOutputStage2, pathVector);
+            if (true) return -1;
+
             if (changed <= maxConvergence || n >= maxIters) {
                 if (!job3.waitForCompletion(true)) {
-                    System.err.println("Failed to execute FinalResultBuilder for iteration #" + n);
+                    LOG.error("Failed to execute FinalResultBuilder for iteration #" + n);
                     return -1;
                 }
                 break;
             }
         }
-        System.out.println("Connected component computed in " + n + " iterations");
+        LOG.info("Connected component computed in " + n + " iterations");
         return 0;
     }
 

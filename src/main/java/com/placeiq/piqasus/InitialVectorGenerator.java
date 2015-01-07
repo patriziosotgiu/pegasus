@@ -38,7 +38,12 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+
 public class InitialVectorGenerator extends Configured implements Tool {
+
+    private static final Logger LOG = LogManager.getLogger(InitialVectorGenerator.class);
 
     public static class _Mapper extends Mapper<LongWritable, Text, VLongWritable, Text> {
         private final VLongWritable KEY   = new VLongWritable();
@@ -95,7 +100,7 @@ public class InitialVectorGenerator extends Configured implements Tool {
 
         genCmdFile(numberOfNodes, numberOfReducers, pathBitmask);
         if (!buildJob().waitForCompletion(true)) {
-            System.err.println("Failed to execute InitialVectorGenerator");
+            LOG.error("Failed to execute InitialVectorGenerator");
             return -1;
         }
         FileSystem.get(getConf()).delete(pathBitmask, false);

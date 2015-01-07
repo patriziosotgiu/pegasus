@@ -39,7 +39,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+
 public class BlocksBuilder extends Configured implements Tool {
+
+    private static final Logger LOG = LogManager.getLogger(BlocksBuilder.class);
 
     public static class LightBlockWritable implements Writable {
 
@@ -231,7 +236,7 @@ public class BlocksBuilder extends Configured implements Tool {
         isVector         = args[4].equals("vector");
 
         if (!configStage1().waitForCompletion(true)) {
-            System.err.println("Failed to execute BlocksBuilder");
+            LOG.error("Failed to execute BlocksBuilder");
             return -1;
         }
         return 0;
