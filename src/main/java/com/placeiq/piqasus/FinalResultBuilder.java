@@ -45,7 +45,7 @@ public class FinalResultBuilder {
                 long component = value.getVectorElemValues().get(i);
                 if (component >= 0) {
                     KEY.set(blockWidth * blockIdx + i);
-                    VALUE.set("msf" + component);
+                    VALUE.set(component);
                     ctx.write(KEY, VALUE);
                 }
             }
