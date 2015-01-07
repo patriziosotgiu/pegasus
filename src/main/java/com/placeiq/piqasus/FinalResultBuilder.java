@@ -27,9 +27,9 @@ import java.io.IOException;
 
 public class FinalResultBuilder {
 
-    public static class _Mapper extends Mapper<BlockIndexWritable, BlockWritable, VLongWritable, Text> {
+    public static class _Mapper extends Mapper<BlockIndexWritable, BlockWritable, VLongWritable, VLongWritable> {
         private final VLongWritable KEY   = new VLongWritable();
-        private final Text          VALUE = new Text();
+        private final VLongWritable VALUE = new VLongWritable();
 
         private int blockWidth = 32;
 
