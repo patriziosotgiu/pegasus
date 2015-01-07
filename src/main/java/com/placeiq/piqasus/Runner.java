@@ -36,13 +36,7 @@ public class Runner extends Configured implements Tool {
 
     public static int MAX_ITERATIONS = 1024;
 
-    private Path pathEdges        = null;
-    private Path pathVector       = null;
-    private Path workDir          = null;
-    private Path pathOutputStage1 = null;
-    private Path pathOutputStage2 = null;
-    private Path pathOutputVector = null;
-    private int  numberOfReducers = 1;
+    private int numberOfReducers = 1;
     private int blockSize = 64;
 
     public static void main(final String[] args) throws Exception {
@@ -51,12 +45,13 @@ public class Runner extends Configured implements Tool {
     }
 
     public int run(final String[] args) throws Exception {
-        pathEdges        = new Path(args[0]);
-        pathVector       = new Path(args[1]);
-        workDir          = new Path(args[2]);
-        pathOutputStage1 = new Path(workDir, "stage1");
-        pathOutputStage2 = new Path(workDir, "stage2");
-        pathOutputVector = new Path(workDir, "result");
+        Path pathEdges        = new Path(args[0]);
+        Path pathVector       = new Path(args[1]);
+        Path workDir          = new Path(args[2]);
+        Path pathOutputStage1 = new Path(workDir, "stage1");
+        Path pathOutputStage2 = new Path(workDir, "stage2");
+        Path pathOutputVector = new Path(workDir, "result");
+
         numberOfReducers = Integer.parseInt(args[3]);
         blockSize = Integer.parseInt(args[4]);
 
@@ -72,13 +67,15 @@ public class Runner extends Configured implements Tool {
 
         FileSystem fs = FileSystem.get(getConf());
 
-        Job job1 = buildJob1();
-        Job job2 = buildJob2();
-        Job job3 = buildJob3();
+        Job job1 = buildJob1(pathEdges, pathVector, pathOutputStage1);
+        Job job2 = buildJob2(pathOutputStage1, pathOutputStage2);
+        Job job3 = buildJob3(pathVector, pathOutputVector);
 
         int n = 0;
         for (; n < MAX_ITERATIONS; n++) {
             fs.delete(pathOutputStage1, true);
+            fs.delete(pathOutputStage2, true);
+
             if (!job1.waitForCompletion(true)) {
                 System.err.println("Failed to execute IterationStage1 for iteration #" + n);
                 return -1;
@@ -105,7 +102,7 @@ public class Runner extends Configured implements Tool {
         return 0;
     }
 
-    private Job buildJob1() throws Exception {
+    private Job buildJob1(Path input1, Path input2, Path output) throws Exception {
         Configuration conf = getConf();
         conf.setInt(Constants.PROP_BLOCK_SIZE, blockSize);
         conf.set("mapred.output.compression.type", "BLOCK");
@@ -126,8 +123,8 @@ public class Runner extends Configured implements Tool {
         job.setPartitionerClass(IterationStage1.IndexPartitioner.class);
         job.setSortComparatorClass(IterationStage1.SortComparator.class);
 
-        FileInputFormat.setInputPaths(job, pathEdges, pathVector);
-        SequenceFileOutputFormat.setOutputPath(job, pathOutputStage1);
+        FileInputFormat.setInputPaths(job, input1, input2);
+        SequenceFileOutputFormat.setOutputPath(job, output);
         SequenceFileOutputFormat.setCompressOutput(job, true);
 
         setCompression(job);
@@ -135,7 +132,7 @@ public class Runner extends Configured implements Tool {
         return job;
     }
 
-    private Job buildJob2() throws Exception {
+    private Job buildJob2(Path input, Path output) throws Exception {
         Configuration conf = getConf();
         conf.setInt(Constants.PROP_BLOCK_SIZE, blockSize);
 
@@ -153,15 +150,15 @@ public class Runner extends Configured implements Tool {
         job.setOutputValueClass(BlockWritable.class);
         job.setSortComparatorClass(VLongWritableComparator.class);
 
-        SequenceFileInputFormat.setInputPaths(job, pathOutputStage1);
-        FileOutputFormat.setOutputPath(job, pathOutputStage2);
+        SequenceFileInputFormat.setInputPaths(job, input);
+        FileOutputFormat.setOutputPath(job, output);
         FileOutputFormat.setCompressOutput(job, true);
 
         setCompression(job);
         return job;
     }
 
-    private Job buildJob3() throws Exception {
+    private Job buildJob3(Path input, Path output) throws Exception {
         Configuration conf = getConf();
         conf.setInt(Constants.PROP_BLOCK_SIZE, blockSize);
 
@@ -174,8 +171,8 @@ public class Runner extends Configured implements Tool {
         job.setOutputKeyClass(VLongWritable.class);
         job.setOutputValueClass(VLongWritable.class);
 
-        FileInputFormat.setInputPaths(job, pathVector);
-        FileOutputFormat.setOutputPath(job, pathOutputVector);
+        FileInputFormat.setInputPaths(job, input);
+        FileOutputFormat.setOutputPath(job, output);
         FileOutputFormat.setCompressOutput(job, true);
 
         setCompression(job);
