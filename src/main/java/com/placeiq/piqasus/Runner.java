@@ -188,7 +188,7 @@ public class Runner extends Configured implements Tool {
     }
 
     public static void setCompression(Job job) {
-     //   FileOutputFormat.setOutputCompressorClass(job, GzipCodec.class);
         FileOutputFormat.setOutputCompressorClass(job, SnappyCodec.class);
+        job.getConfiguration().set("mapred.map.output.compression.codec", "org.apache.hadoop.io.compress.SnappyCodec");
     }
 }
