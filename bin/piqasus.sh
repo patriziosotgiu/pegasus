@@ -33,7 +33,8 @@
 
 #!/bin/sh
 
-JAR=../target/Pegasus-1.3-SNAPSHOT-fatjar.jar
+#FIXME: set correct path...
+JAR=../target/piqasus-1.0-SNAPSHOT-fatjar.jar
 
 WORK_DIR=pegasus_work
 
