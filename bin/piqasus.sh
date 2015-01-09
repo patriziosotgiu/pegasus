@@ -1,5 +1,12 @@
 # PIQASUS: Connected-component analysis for Big Graph
 #
+# __________.___________      _____    _____________ ___  _________
+# \______   \   \_____  \    /  _  \  /   _____/    |   \/   _____/
+#  |     ___/   |/  / \  \  /  /_\  \ \_____  \|    |   /\_____  \
+#  |    |   |   /   \_/.  \/    |    \/        \    |  / /        \
+#  |____|   |___\_____\ \_/\____|__  /_______  /______/ /_______  /
+#                      \__>        \/        \/                 \/
+#
 # Copyright (c) 2014 PlaceIQ, Inc
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -17,6 +24,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# ----------------------------------------------------------------------------
+# Author: Jerome Serrano <jerome.serrano@placeiq.com>
+# Date: 2015-01-09
+# ----------------------------------------------------------------------------
+
+
 
 #!/bin/sh
 
