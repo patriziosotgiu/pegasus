@@ -211,8 +211,6 @@ public class IterationStage1 {
         }
     }
 
-    // TODO: use 2 distinct mappers and multiple input to avoid the if-else condition
-    // output negative key to identify
     public static class _Mapper extends Mapper<BlockIndexWritable, BlockWritable, JoinKey, BlockWritable> {
 
         private final JoinKey KEY = new JoinKey();
@@ -222,7 +220,6 @@ public class IterationStage1 {
         public void setup(Context ctx) {
             Configuration conf = ctx.getConfiguration();
             VALUE = new BlockWritable(conf.getInt(Constants.PROP_BLOCK_SIZE, 32));
-            //System.out.println("blockWidth: " + conf.getInt(Constants.PROP_BLOCK_SIZE, 32));
         }
 
         @Override
@@ -239,7 +236,6 @@ public class IterationStage1 {
                 ctx.getCounter(PiqasusCounter.NUMBER_BLOCK_MATRIX).increment(1);
             }
             ctx.write(KEY, VALUE);
-            //System.out.println("_Mapper.map: " + KEY + ", " + VALUE);
         }
     }
 
@@ -254,10 +250,8 @@ public class IterationStage1 {
 
             Iterator<BlockWritable> it = values.iterator();
             INITIAL_VECTOR.set(it.next());
-            //System.out.println("_Reducer.reduce input value: " + key + "," + INITIAL_VECTOR);
 
             if (!INITIAL_VECTOR.isTypeVector()) {
-                // missing vector... should never happen, right ? throw exception ?
                 ctx.getCounter(PiqasusCounter.ERROR_NO_INITIAL_VECTOR).increment(1);
                 System.err.println("error: no vector, key=" + key + ", first_value=" + INITIAL_VECTOR);
                 return;
@@ -266,15 +260,12 @@ public class IterationStage1 {
             VALUE.set(BlockWritable.TYPE.VECTOR_INITIAL, INITIAL_VECTOR);
             KEY.set(key.index);
             ctx.write(KEY, VALUE);
-            //System.out.println("_Reducer.reduce: " + KEY + "," + VALUE);
 
             while (it.hasNext()) {
                 BlockWritable e = it.next();
-                //System.out.println("_Reducer.reduce input value: " + key + "," + e + ", initial vector: " + INITIAL_VECTOR);
                 KEY.set(e.getBlockRow());
                 VALUE.setVector(BlockWritable.TYPE.VECTOR_INCOMPLETE, GIMV.minBlockVector(e, INITIAL_VECTOR));
                 ctx.write(KEY, VALUE);
-                //System.out.println("_Reducer.reduce: " + KEY + "," + VALUE);
             }
         }
     }

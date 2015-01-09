@@ -32,6 +32,4 @@ package com.placeiq.piqasus;
 public final class Constants {
     public static final String PROP_BLOCK_SIZE = "blockSize";
     public static final String PROP_IS_VECTOR  = "isVector";
-
-
 }

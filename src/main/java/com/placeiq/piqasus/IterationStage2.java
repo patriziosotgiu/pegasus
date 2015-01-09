@@ -64,7 +64,6 @@ public class IterationStage2 {
 
             res.fill(0, blockSize, -2);
             for (BlockWritable block : values) {
-                //System.out.println("_Reducer.reduce input: " + key + "," + block);
                 BlockWritable.TYPE t = block.getType();
                 if (t == BlockWritable.TYPE.VECTOR_FINAL || t == BlockWritable.TYPE.VECTOR_INITIAL) {
                     initialVector.set(block);
@@ -98,7 +97,6 @@ public class IterationStage2 {
             VALUE.setVector(type, res);
             KEY.setVectorIndex(key.get());
             ctx.write(KEY, VALUE);
-            //System.out.println("_Reducer.reduce: " + KEY + "," + VALUE);
             ctx.getCounter(noChange ? PiqasusCounter.NUMBER_FINAL_VECTOR : PiqasusCounter.NUMBER_INCOMPLETE_VECTOR)
                     .increment(1);
         }
