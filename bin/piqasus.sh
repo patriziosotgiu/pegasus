@@ -1,3 +1,4 @@
+#!/bin/sh
 # PIQASUS: Connected-component analysis for Big Graph
 #
 # __________.___________      _____    _____________ ___  _________
@@ -28,10 +29,6 @@
 # Author: Jerome Serrano <jerome.serrano@placeiq.com>
 # Date: 2015-01-09
 # ----------------------------------------------------------------------------
-
-
-
-#!/bin/sh
 
 #FIXME: set correct path...
 JAR=../target/piqasus-1.0-SNAPSHOT-fatjar.jar
